@@ -116,11 +116,11 @@ impl egui::app::App for EguiApp {
                         ui.checkbox(&mut show_password, "Show password");
                     });
 
-                    if ui.button("Login").clicked && password != "" && username != "" {
+                    if ui.button("Login").clicked && !password.is_empty() && !username.is_empty() {
                         next_state = State::Market(AccountState::LoggedIn);
                     }
 
-                    if password == "" || username == "" {
+                    if password.is_empty() || username.is_empty() {
                         ui.colored_label(egui::color::YELLOW, "Both fields are required to be filled");
                     }
                 });

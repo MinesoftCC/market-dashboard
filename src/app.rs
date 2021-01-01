@@ -85,14 +85,14 @@ impl egui::app::App for EguiApp {
                 egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
                     ui.horizontal_wrapped(|ui| match acct_status {
                         AccountState::LoggedIn => {
-                            ui.heading(format!("{}", username));
+                            ui.heading(username.to_string());
 
                             if ui.button("Log out").clicked {
                                 next_state = State::Market(AccountState::LoggedOut);
                             }
                         },
                         AccountState::LoggedOut => {
-                            ui.heading(format!("Logged out"));
+                            ui.heading("Logged out".to_string());
 
                             if ui.button("Log in").clicked {
                                 next_state = State::Login;
@@ -116,10 +116,8 @@ impl egui::app::App for EguiApp {
                         ui.checkbox(&mut show_password, "Show password");
                     });
 
-                    if ui.button("Login").clicked {
-                        if password != "" && username != "" {
-                            next_state = State::Market(AccountState::LoggedIn);
-                        }
+                    if ui.button("Login").clicked && password != "" && username != "" {
+                        next_state = State::Market(AccountState::LoggedIn);
                     }
 
                     if password == "" || username == "" {

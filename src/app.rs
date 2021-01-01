@@ -1,178 +1,143 @@
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+enum AccountState {
+    LoggedOut,
+    LoggedIn,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+enum State {
+    Market(AccountState),
+    Login,
+}
+
+impl Default for State {
+    fn default() -> Self { State::Market(AccountState::LoggedOut) }
+}
+
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct EguiApp {
-    // Example stuff:
-    label: String,
-    value: f32,
-    painting: Painting,
+    username: String,
+    password: String,
+    password_colour: egui::color::Srgba,
+    show_password: bool,
+    #[serde(skip)]
+    state: State,
 }
 
 impl Default for EguiApp {
     fn default() -> Self {
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
-            painting: Default::default(),
+            username: "".into(),
+            password: "".into(),
+            password_colour: egui::color::TRANSPARENT,
+            show_password: false,
+            state: State::Market(AccountState::LoggedOut),
         }
     }
 }
 
 impl egui::app::App for EguiApp {
-    fn name(&self) -> &str {
-        "Egui Template"
-    }
+    fn name(&self) -> &str { "CCMarket" }
 
-    /// Called by the framework to load old app state (if any).
     fn load(&mut self, storage: &dyn egui::app::Storage) {
         *self = egui::app::get_value(storage, egui::app::APP_KEY).unwrap_or_default()
     }
 
-    /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn egui::app::Storage) {
         egui::app::set_value(storage, egui::app::APP_KEY, self);
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn ui(&mut self, ctx: &egui::CtxRef, integration_context: &mut egui::app::IntegrationContext) {
-        let EguiApp {
-            label,
-            value,
-            painting,
-        } = self;
+        let mut fonts = egui::FontDefinitions::default();
 
-        // Examples of how to create different panels and windows.
-        // Pick whichever suits you.
-        // Tip: a good default choice is to just keep the `CentralPanel`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
+        fonts.family_and_size.iter_mut().for_each(|item| {
+            let (style, (_, font_size)) = item;
 
-        egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
-            ui.heading("Side Panel");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(label);
-            });
-
-            ui.add(egui::Slider::f32(value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked {
-                *value += 1.0;
+            match style {
+                egui::TextStyle::Body => *font_size = 18.0,
+                egui::TextStyle::Button => *font_size = 18.0,
+                egui::TextStyle::Heading => *font_size = 24.0,
+                egui::TextStyle::Small => *font_size = 16.0,
+                _ => {},
             }
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                ui.add(
-                    egui::Hyperlink::new("https://github.com/emilk/egui/").text("Powered by Egui"),
-                );
-            });
         });
+
+        ctx.set_fonts(fonts);
+
+        let EguiApp {
+            username,
+            password,
+            show_password,
+            password_colour,
+            state,
+        } = self;
+        let mut next_state = state.clone();
 
         egui::TopPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
-                egui::menu::menu(ui, "File", |ui| {
-                    if ui.button("Quit").clicked {
-                        integration_context.output.quit = true;
+            ui.vertical_centered(|ui| {
+                ui.heading("Market");
+            });
+        });
+
+        let mut show_password = show_password;
+        match state {
+            State::Market(acct_status) => {
+                egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
+                    ui.horizontal_wrapped(|ui| match acct_status {
+                        AccountState::LoggedIn => {
+                            ui.heading(format!("{}", username));
+
+                            if ui.button("Log out").clicked {
+                                next_state = State::Market(AccountState::LoggedOut);
+                            }
+                        },
+                        AccountState::LoggedOut => {
+                            ui.heading(format!("Logged out"));
+
+                            if ui.button("Log in").clicked {
+                                next_state = State::Login;
+                            }
+                        },
+                    })
+                });
+            },
+            State::Login => {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    ui.heading("Login");
+                    ui.heading("");
+                    ui.horizontal(|ui| {
+                        ui.label("Username");
+                        ui.text_edit_singleline(username);
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label("Password ");
+                        ui.add(egui::TextEdit::singleline(password).text_color(*password_colour));
+                        ui.checkbox(&mut show_password, "Show password");
+                    });
+
+                    if ui.button("Login").clicked {
+                        if password != "" && username != "" {
+                            next_state = State::Market(AccountState::LoggedIn);
+                        }
+                    }
+
+                    if password == "" || username == "" {
+                        ui.colored_label(egui::color::YELLOW, "Both fields are required to be filled");
                     }
                 });
-            });
-        });
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Egui Template");
-            ui.hyperlink("https://github.com/emilk/egui_template");
-            ui.add(egui::github_link_file_line!(
-                "https://github.com/emilk/egui_template/blob/master/",
-                "Direct link to source code."
-            ));
-            egui::demos::warn_if_debug_build(ui);
-
-            ui.separator();
-
-            ui.heading("Central Panel");
-            ui.label("The central panel the region left after adding TopPanel's and SidePanel's");
-            ui.label("It is often a great place for big things, like drawings:");
-
-            ui.heading("Draw with your mouse to paint:");
-            painting.ui_control(ui);
-            egui::Frame::dark_canvas(ui.style()).show(ui, |ui| {
-                painting.ui_content(ui);
-            });
-        });
-
-        if false {
-            egui::Window::new("Window").show(ctx, |ui| {
-                ui.label("Windows can be moved by dragging them.");
-                ui.label("They are automatically sized based on contents.");
-                ui.label("You can turn on resizing and scrolling if you like.");
-                ui.label("You would normally chose either panels OR windows.");
-            });
+            },
         }
 
-        // Resize the glium window to be just the size we need it to be:
+        if *show_password {
+            *password_colour = egui::color::LIGHT_GRAY;
+        } else {
+            *password_colour = egui::color::TRANSPARENT;
+        }
+        self.show_password = *show_password;
+
+        *state = next_state;
+
         integration_context.output.window_size = Some(ctx.used_size());
-    }
-}
-
-// ----------------------------------------------------------------------------
-
-/// Example code for painting on a canvas with your mouse
-#[derive(Clone, serde::Deserialize, serde::Serialize)]
-struct Painting {
-    lines: Vec<Vec<egui::Vec2>>,
-    stroke: egui::Stroke,
-}
-
-impl Default for Painting {
-    fn default() -> Self {
-        Self {
-            lines: Default::default(),
-            stroke: egui::Stroke::new(1.0, egui::color::LIGHT_BLUE),
-        }
-    }
-}
-
-impl Painting {
-    pub fn ui_control(&mut self, ui: &mut egui::Ui) -> egui::Response {
-        ui.horizontal(|ui| {
-            self.stroke.ui(ui, "Stroke");
-            ui.separator();
-            if ui.button("Clear Painting").clicked {
-                self.lines.clear();
-            }
-        })
-        .1
-    }
-
-    pub fn ui_content(&mut self, ui: &mut egui::Ui) -> egui::Response {
-        let (response, painter) =
-            ui.allocate_painter(ui.available_size_before_wrap_finite(), egui::Sense::drag());
-        let rect = response.rect;
-
-        if self.lines.is_empty() {
-            self.lines.push(vec![]);
-        }
-
-        let current_line = self.lines.last_mut().unwrap();
-
-        if response.active {
-            if let Some(mouse_pos) = ui.input().mouse.pos {
-                let canvas_pos = mouse_pos - rect.min;
-                if current_line.last() != Some(&canvas_pos) {
-                    current_line.push(canvas_pos);
-                }
-            }
-        } else if !current_line.is_empty() {
-            self.lines.push(vec![]);
-        }
-
-        for line in &self.lines {
-            if line.len() >= 2 {
-                let points: Vec<egui::Pos2> = line.iter().map(|p| rect.min + *p).collect();
-                painter.add(egui::PaintCmd::line(points, self.stroke));
-            }
-        }
-
-        response
     }
 }

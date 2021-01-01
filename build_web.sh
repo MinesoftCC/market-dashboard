@@ -4,7 +4,7 @@ set -eu
 # ./setup_web.sh # <- call this first!
 
 FOLDER_NAME=${PWD##*/}
-CRATE_NAME=$FOLDER_NAME # assume crate name is the same as the folder name
+CRATE_NAME="market_dashboard"
 
 # This is required to enable the web_sys clipboard API
 # https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.Clipboard.html

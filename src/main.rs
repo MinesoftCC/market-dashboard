@@ -1,9 +1,10 @@
 #![forbid(unsafe_code)]
-#![cfg_attr(not(debug_assertions), deny(warnings))] // Forbid warnings in release builds
 #![warn(clippy::all)]
 
-// When compiling natively:
+pub mod app;
+pub use app::EguiApp;
+
 fn main() {
-    let app = egui_template::EguiApp::default();
+    let app = EguiApp::default();
     egui_glium::run(Box::new(app));
 }

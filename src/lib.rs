@@ -1,12 +1,8 @@
 #![forbid(unsafe_code)]
-#![cfg_attr(not(debug_assertions), deny(warnings))] // Forbid warnings in release builds
 #![warn(clippy::all)]
 
 pub mod app;
 pub use app::EguiApp;
-
-// ----------------------------------------------------------------------------
-// When compiling for web:
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;

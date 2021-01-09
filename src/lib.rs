@@ -2,6 +2,7 @@
 #![warn(clippy::all)]
 
 pub mod app;
+pub mod views;
 pub use app::EguiApp;
 
 #[cfg(target_arch = "wasm32")]

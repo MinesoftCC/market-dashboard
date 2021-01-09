@@ -11,7 +11,13 @@ pub struct LoginPage;
 
 impl LoginPage {
     #[cfg(target_arch = "wasm32")]
-    fn get_user_data(ui: &mut egui::Ui, username: &String, password: &String, next_state: &mut State) {
+    fn get_user_data(
+        username: &String,
+        password: &String,
+        next_state: &mut State,
+        show_bank_connection_error: &mut BankConnectionError,
+        _show_login_error: &mut LoginError,
+    ) {
         use wasm_bindgen::prelude::*;
         use wasm_bindgen::JsCast;
         use wasm_bindgen_futures::JsFuture;

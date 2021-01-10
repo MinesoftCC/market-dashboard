@@ -7,5 +7,5 @@ pub use app::EguiApp;
 
 fn main() {
     let app = EguiApp::default();
-    egui_glium::run(Box::new(app));
+    eframe::run_native(Box::new(app));
 }

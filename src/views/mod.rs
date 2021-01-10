@@ -8,7 +8,7 @@ pub use profile::*;
 
 use crate::app::{AccountState, State};
 
-fn draw_sidebar(ctx: &egui::CtxRef, username: &String, next_state: &mut State, account_status: &mut AccountState) {
+fn draw_sidebar(ctx: &egui::CtxRef, username: &str, next_state: &mut State, account_status: &mut AccountState) {
     egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
         ui.horizontal_wrapped(|ui| match account_status {
             AccountState::LoggedIn => {

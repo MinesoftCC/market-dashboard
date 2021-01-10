@@ -42,7 +42,8 @@ impl Default for LoginError {
 pub struct EguiApp {
     pub username: String,
     pub password: String,
-    pub password_colour: egui::color::Srgba,
+    #[serde(skip)]
+    pub password_colour: egui::color::Color32,
     pub show_password: bool,
     pub remember: bool,
     pub state: State,
@@ -57,7 +58,7 @@ impl Default for EguiApp {
         Self {
             username: "".into(),
             password: "".into(),
-            password_colour: egui::color::TRANSPARENT,
+            password_colour: egui::color::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
             state: State::Market(AccountState::LoggedOut),
@@ -88,22 +89,22 @@ impl EguiApp {
     }
 }
 
-impl egui::app::App for EguiApp {
+impl epi::App for EguiApp {
     fn name(&self) -> &str { "CCMarket" }
 
-    fn load(&mut self, storage: &dyn egui::app::Storage) {
-        *self = egui::app::get_value(storage, egui::app::APP_KEY).unwrap_or_default();
+    fn load(&mut self, storage: &dyn epi::Storage) {
+        *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default();
     }
 
-    fn save(&mut self, storage: &mut dyn egui::app::Storage) {
+    fn save(&mut self, storage: &mut dyn epi::Storage) {
         if !self.remember {
             *self = Self::default();
         }
 
-        egui::app::set_value(storage, egui::app::APP_KEY, self);
+        epi::set_value(storage, epi::APP_KEY, self);
     }
 
-    fn ui(&mut self, ctx: &egui::CtxRef, integration_context: &mut egui::app::IntegrationContext) {
+    fn update(&mut self, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
         let EguiApp {
             username,
             password,
@@ -139,30 +140,24 @@ impl egui::app::App for EguiApp {
         let mut remember = remember;
 
         match state {
-            State::Market(acct_status) =>
-                IndexPage::draw(ctx, integration_context, &username, acct_status, &mut next_state),
+            State::Market(acct_status) => IndexPage::draw(ctx, &username, acct_status, &mut next_state),
             State::Login => {
                 LoginPage::draw(
                     ctx,
-                    integration_context,
-                    username,
-                    password,
-                    &mut show_password,
-                    &mut remember,
+                    (username, password),
+                    (&mut show_password, &mut remember),
                     password_colour,
                     &mut next_state,
-                    show_bank_connection_error,
-                    show_login_error,
+                    (show_bank_connection_error, show_login_error),
                 );
             },
-            State::Profile(acct_status) =>
-                ProfilePage::draw(ctx, integration_context, username, &mut next_state, acct_status),
+            State::Profile(acct_status) => ProfilePage::draw(ctx, username, &mut next_state, acct_status),
         }
 
         if *show_password {
-            *password_colour = egui::color::LIGHT_GRAY;
+            *password_colour = egui::color::Color32::LIGHT_GRAY;
         } else {
-            *password_colour = egui::color::TRANSPARENT;
+            *password_colour = egui::color::Color32::TRANSPARENT;
         }
 
         self.show_password = *show_password;
@@ -170,7 +165,5 @@ impl egui::app::App for EguiApp {
         self.show_bank_connection_error = show_bank_connection_error.clone();
 
         *state = next_state;
-
-        integration_context.output.window_size = Some(ctx.used_size());
     }
 }

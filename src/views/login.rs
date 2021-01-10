@@ -1,5 +1,4 @@
 use crate::app::{AccountState, BankConnectionError, LoginError, State};
-use reqwest;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Response {
@@ -10,34 +9,20 @@ struct Response {
 pub struct LoginPage;
 
 impl LoginPage {
-    #[cfg(target_arch = "wasm32")]
-    fn get_user_data(
-        username: &String,
-        password: &String,
-        next_state: &mut State,
-        show_bank_connection_error: &mut BankConnectionError,
-        _show_login_error: &mut LoginError,
-    ) {
-        use wasm_bindgen::prelude::*;
-        use wasm_bindgen::JsCast;
-        use wasm_bindgen_futures::JsFuture;
-        use web_sys::{Request, RequestInit, RequestMode, Response};
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn get_user_id(username: &String) -> i32 {
+    fn get_user_id(username: &str, show_bank_connection_error: &mut BankConnectionError) -> i32 {
         let client = reqwest::blocking::Client::new();
         let mut user_id = 0;
 
-        let users: Vec<String> = if let Ok(v) = serde_json::from_str(
-            client
-                .get("http://157.90.30.90/bankapi/listusers")
-                .send()
-                .unwrap()
-                .text()
-                .unwrap()
-                .as_str(),
-        ) {
+        let response = match client.get("http://157.90.30.90/bankapi/listusers").send() {
+            Ok(v) => v,
+            Err(_) => {
+                *show_bank_connection_error =
+                    BankConnectionError::Show("Could not connect to bank server to get user ID".into());
+                return user_id;
+            },
+        };
+
+        let users: Vec<String> = if let Ok(v) = serde_json::from_str(response.text().unwrap().as_str()) {
             v
         } else {
             Vec::new()
@@ -49,23 +34,22 @@ impl LoginPage {
             }
         });
 
-        return user_id;
+        user_id
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     fn get_user_data(
-        username: &String,
-        password: &String,
+        username: &str,
+        password: &str,
         next_state: &mut State,
         show_bank_connection_error: &mut BankConnectionError,
-        _show_login_error: &mut LoginError,
+        show_login_error: &mut LoginError,
     ) {
         let client = reqwest::blocking::Client::new();
         let response = client
-            .post(
+            .get(
                 format!(
-                    "http://157.90.30.90/bankapi/vpass/{}/{}",
-                    Self::get_user_id(username),
+                    "http://157.90.30.90/BankAPI/verifypass/{}/{}",
+                    Self::get_user_id(username, show_bank_connection_error),
                     password
                 )
                 .as_str(),
@@ -82,8 +66,15 @@ impl LoginPage {
                     return;
                 }
 
-                *show_bank_connection_error = BankConnectionError::Hide;
-                *next_state = State::Market(AccountState::LoggedIn);
+                let response: Response = serde_json::from_str(response.text().unwrap().as_str()).unwrap();
+
+                if response.value == 1 {
+                    *show_bank_connection_error = BankConnectionError::Hide;
+                    *show_login_error = LoginError::Success;
+                    *next_state = State::Market(AccountState::LoggedIn);
+                } else {
+                    *show_login_error = LoginError::Fail;
+                }
             },
             Err(error) => {
                 *show_bank_connection_error = BankConnectionError::Show(format!(
@@ -96,16 +87,16 @@ impl LoginPage {
 
     pub fn draw(
         ctx: &egui::CtxRef,
-        _integration_context: &mut egui::app::IntegrationContext,
-        username: &mut String,
-        password: &mut String,
-        show_password: &mut bool,
-        remember: &mut bool,
-        password_colour: &mut egui::color::Srgba,
+        user_data: (&mut String, &mut String),
+        password_states: (&mut bool, &mut bool),
+        password_colour: &mut egui::color::Color32,
         next_state: &mut State,
-        show_bank_connection_error: &mut BankConnectionError,
-        show_login_error: &mut LoginError,
+        error_states: (&mut BankConnectionError, &mut LoginError),
     ) {
+        let (username, password) = user_data;
+        let (show_password, remember) = password_states;
+        let (show_bank_connection_error, show_login_error) = error_states;
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Login");
             ui.heading("");
@@ -133,11 +124,15 @@ impl LoginPage {
             }
 
             if password.is_empty() || username.is_empty() {
-                ui.colored_label(egui::color::YELLOW, "Both fields are required to be filled");
+                ui.colored_label(egui::color::Color32::YELLOW, "Both fields are required to be filled");
             }
 
             if let BankConnectionError::Show(message) = show_bank_connection_error {
-                ui.colored_label(egui::color::RED, message.clone());
+                ui.colored_label(egui::color::Color32::RED, message.clone());
+            }
+
+            if let LoginError::Fail = show_login_error {
+                ui.colored_label(egui::color::Color32::YELLOW, "Password or username was incorrect");
             }
         });
     }

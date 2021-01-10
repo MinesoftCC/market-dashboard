@@ -3,9 +3,9 @@
 
 pub mod app;
 pub mod views;
-pub use app::EguiApp;
+pub use app::MarketDashboard;
 
 fn main() {
-    let app = EguiApp::default();
+    let app = MarketDashboard::default();
     eframe::run_native(Box::new(app));
 }

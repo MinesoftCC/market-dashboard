@@ -1,7 +1,7 @@
 use crate::app::{AccountState, BankConnectionError, LoginError, State};
 
 #[derive(serde::Deserialize, serde::Serialize)]
-struct Response {
+pub struct BankResponse {
     pub content: String,
     pub value: i32,
 }
@@ -66,7 +66,7 @@ impl LoginPage {
                     return;
                 }
 
-                let response: Response = serde_json::from_str(response.text().unwrap().as_str()).unwrap();
+                let response: BankResponse = serde_json::from_str(response.text().unwrap().as_str()).unwrap();
 
                 if response.value == 1 {
                     *show_bank_connection_error = BankConnectionError::Hide;
@@ -87,6 +87,7 @@ impl LoginPage {
 
     pub fn draw(
         ctx: &egui::CtxRef,
+        _frame: &mut epi::Frame<'_>,
         user_data: (&mut String, &mut String),
         password_states: (&mut bool, &mut bool),
         password_colour: &mut egui::color::Color32,
@@ -132,7 +133,7 @@ impl LoginPage {
             }
 
             if let LoginError::Fail = show_login_error {
-                ui.colored_label(egui::color::Color32::YELLOW, "Password or username was incorrect");
+                ui.colored_label(egui::color::Color32::RED, "Password or username was incorrect");
             }
         });
     }

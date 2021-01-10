@@ -1,12 +1,12 @@
 use crate::views::{IndexPage, LoginPage, ProfilePage};
 
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum AccountState {
     LoggedOut,
     LoggedIn,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum State {
     Market(AccountState),
     Login,
@@ -17,7 +17,7 @@ impl Default for State {
     fn default() -> Self { State::Market(AccountState::LoggedOut) }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BankConnectionError {
     Hide,
     Show(String),
@@ -27,7 +27,7 @@ impl Default for BankConnectionError {
     fn default() -> Self { BankConnectionError::Hide }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LoginError {
     Success,
     Fail,
@@ -38,8 +38,8 @@ impl Default for LoginError {
     fn default() -> Self { LoginError::None }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
-pub struct EguiApp {
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct MarketDashboard {
     pub username: String,
     pub password: String,
     #[serde(skip)]
@@ -53,7 +53,7 @@ pub struct EguiApp {
     pub show_login_error: LoginError,
 }
 
-impl Default for EguiApp {
+impl Default for MarketDashboard {
     fn default() -> Self {
         Self {
             username: "".into(),
@@ -68,28 +68,7 @@ impl Default for EguiApp {
     }
 }
 
-impl EguiApp {
-    #[cfg(target_arch = "wasm32")]
-    fn set_fonts(ctx: &egui::CtxRef) {
-        let mut fonts = egui::FontDefinitions::default();
-
-        fonts.family_and_size.iter_mut().for_each(|item| {
-            let (style, (_, font_size)) = item;
-
-            match style {
-                egui::TextStyle::Body => *font_size = 18.0,
-                egui::TextStyle::Button => *font_size = 18.0,
-                egui::TextStyle::Heading => *font_size = 24.0,
-                egui::TextStyle::Small => *font_size = 16.0,
-                _ => {},
-            }
-        });
-
-        ctx.set_fonts(fonts);
-    }
-}
-
-impl epi::App for EguiApp {
+impl epi::App for MarketDashboard {
     fn name(&self) -> &str { "CCMarket" }
 
     fn load(&mut self, storage: &dyn epi::Storage) {
@@ -104,8 +83,8 @@ impl epi::App for EguiApp {
         epi::set_value(storage, epi::APP_KEY, self);
     }
 
-    fn update(&mut self, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
-        let EguiApp {
+    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
+        let MarketDashboard {
             username,
             password,
             show_password,
@@ -115,10 +94,8 @@ impl epi::App for EguiApp {
             show_bank_connection_error,
             show_login_error,
         } = self;
-        let mut next_state = state.clone();
 
-        #[cfg(target_arch = "wasm32")]
-        Self::set_fonts(ctx);
+        let mut next_state = state.clone();
 
         egui::TopPanel::top("top_panel").show(ctx, |ui| {
             ui.vertical_centered(|ui| {
@@ -144,6 +121,7 @@ impl epi::App for EguiApp {
             State::Login => {
                 LoginPage::draw(
                     ctx,
+                    frame,
                     (username, password),
                     (&mut show_password, &mut remember),
                     password_colour,

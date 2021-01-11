@@ -1,6 +1,4 @@
-use crate::app::{AccountState, State};
-
-// struct UserData {}
+use crate::data::states::*;
 
 pub struct ProfilePage;
 

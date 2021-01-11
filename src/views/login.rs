@@ -1,4 +1,4 @@
-use crate::app::{AccountState, BankConnectionError, LoginError, State};
+use crate::data::{errors::*, states::*};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct BankResponse {
@@ -90,7 +90,7 @@ impl LoginPage {
         _frame: &mut epi::Frame<'_>,
         user_data: (&mut String, &mut String),
         password_states: (&mut bool, &mut bool),
-        password_colour: &mut egui::color::Color32,
+        password_colour: &mut egui::Color32,
         next_state: &mut State,
         error_states: (&mut BankConnectionError, &mut LoginError),
     ) {

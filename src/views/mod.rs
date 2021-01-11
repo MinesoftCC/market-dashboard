@@ -1,12 +1,14 @@
 mod index;
+mod item_page;
 mod login;
 mod profile;
 
 pub use index::*;
+pub use item_page::*;
 pub use login::*;
 pub use profile::*;
 
-use crate::app::{AccountState, State};
+use crate::data::states::*;
 
 fn draw_sidebar(ctx: &egui::CtxRef, username: &str, next_state: &mut State, account_status: &mut AccountState) {
     egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
@@ -23,8 +25,10 @@ fn draw_sidebar(ctx: &egui::CtxRef, username: &str, next_state: &mut State, acco
                 }
 
                 if ui.button("Log out").clicked {
-                    *next_state = State::Market(crate::app::AccountState::LoggedOut);
+                    *next_state = State::Market(AccountState::LoggedOut);
                 }
+
+                if ui.button("Add item").clicked {}
             },
             AccountState::LoggedOut => {
                 ui.heading("Logged out".to_string());
@@ -33,6 +37,6 @@ fn draw_sidebar(ctx: &egui::CtxRef, username: &str, next_state: &mut State, acco
                     *next_state = State::Login;
                 }
             },
-        })
+        });
     });
 }

@@ -69,20 +69,6 @@ impl Default for MarketDashboard {
 }
 
 impl epi::App for MarketDashboard {
-    fn name(&self) -> &str { "CCMarket" }
-
-    fn load(&mut self, storage: &dyn epi::Storage) {
-        *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default();
-    }
-
-    fn save(&mut self, storage: &mut dyn epi::Storage) {
-        if !self.remember {
-            *self = Self::default();
-        }
-
-        epi::set_value(storage, epi::APP_KEY, self);
-    }
-
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         let MarketDashboard {
             username,
@@ -144,4 +130,18 @@ impl epi::App for MarketDashboard {
 
         *state = next_state;
     }
+
+    fn load(&mut self, storage: &dyn epi::Storage) {
+        *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default();
+    }
+
+    fn save(&mut self, storage: &mut dyn epi::Storage) {
+        if !self.remember {
+            *self = Self::default();
+        }
+
+        epi::set_value(storage, epi::APP_KEY, self);
+    }
+
+    fn name(&self) -> &str { "CCMarket" }
 }

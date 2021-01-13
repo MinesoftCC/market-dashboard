@@ -9,20 +9,28 @@ pub struct BankResponse {
 pub struct LoginPage;
 
 impl LoginPage {
-    fn get_user_id(username: &str, show_bank_connection_error: &mut BankConnectionError) -> i32 {
+    fn get_user_id(
+        username: &str,
+        show_bank_connection_error: &mut BankConnectionError,
+    ) -> i32 {
         let client = reqwest::blocking::Client::new();
         let mut user_id = 0;
 
-        let response = match client.get("http://157.90.30.90/bankapi/listusers").send() {
-            Ok(v) => v,
-            Err(_) => {
-                *show_bank_connection_error =
-                    BankConnectionError::Show("Could not connect to bank server to get user ID".into());
-                return user_id;
-            },
-        };
+        let response =
+            match client.get("http://157.90.30.90/bankapi/listusers").send() {
+                Ok(v) => v,
+                Err(_) => {
+                    *show_bank_connection_error = BankConnectionError::Show(
+                        "Could not connect to bank server to get user ID"
+                            .into(),
+                    );
+                    return user_id;
+                },
+            };
 
-        let users: Vec<String> = if let Ok(v) = serde_json::from_str(response.text().unwrap().as_str()) {
+        let users: Vec<String> = if let Ok(v) =
+            serde_json::from_str(response.text().unwrap().as_str())
+        {
             v
         } else {
             Vec::new()
@@ -59,14 +67,17 @@ impl LoginPage {
         match response {
             Ok(response) => {
                 if !response.status().is_success() {
-                    *show_bank_connection_error = BankConnectionError::Show(format!(
-                        "Server responded with a {} code",
-                        response.status().as_str()
-                    ));
+                    *show_bank_connection_error =
+                        BankConnectionError::Show(format!(
+                            "Server responded with a {} code",
+                            response.status().as_str()
+                        ));
                     return;
                 }
 
-                let response: BankResponse = serde_json::from_str(response.text().unwrap().as_str()).unwrap();
+                let response: BankResponse =
+                    serde_json::from_str(response.text().unwrap().as_str())
+                        .unwrap();
 
                 if response.value == 1 {
                     *show_bank_connection_error = BankConnectionError::Hide;
@@ -77,10 +88,11 @@ impl LoginPage {
                 }
             },
             Err(error) => {
-                *show_bank_connection_error = BankConnectionError::Show(format!(
-                    "Could not contact server. Error message:\n{}",
-                    format!("{:?}", error).replace(password, "[REDACTED]")
-                ));
+                *show_bank_connection_error =
+                    BankConnectionError::Show(format!(
+                        "Could not contact server. Error message:\n{}",
+                        format!("{:?}", error).replace(password, "[REDACTED]")
+                    ));
             },
         }
     }
@@ -108,13 +120,19 @@ impl LoginPage {
 
             ui.horizontal(|ui| {
                 ui.label("Password ");
-                ui.add(egui::TextEdit::singleline(password).text_color(*password_colour));
+                ui.add(
+                    egui::TextEdit::singleline(password)
+                        .text_color(*password_colour),
+                );
                 ui.checkbox(show_password, "Show password");
             });
 
             ui.checkbox(remember, "Remember me");
 
-            if ui.button("Login").clicked && !password.is_empty() && !username.is_empty() {
+            if ui.button("Login").clicked
+                && !password.is_empty()
+                && !username.is_empty()
+            {
                 Self::get_user_data(
                     username,
                     password,
@@ -125,15 +143,23 @@ impl LoginPage {
             }
 
             if password.is_empty() || username.is_empty() {
-                ui.colored_label(egui::Color32::YELLOW, "Both fields are required to be filled");
+                ui.colored_label(
+                    egui::Color32::YELLOW,
+                    "Both fields are required to be filled",
+                );
             }
 
-            if let BankConnectionError::Show(message) = show_bank_connection_error {
+            if let BankConnectionError::Show(message) =
+                show_bank_connection_error
+            {
                 ui.colored_label(egui::Color32::RED, message.clone());
             }
 
             if let LoginError::Fail = show_login_error {
-                ui.colored_label(egui::Color32::RED, "Password or username was incorrect");
+                ui.colored_label(
+                    egui::Color32::RED,
+                    "Password or username was incorrect",
+                );
             }
         });
     }

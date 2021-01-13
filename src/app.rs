@@ -5,34 +5,41 @@ use crate::{
 use std::{sync::Mutex, thread, time::Duration};
 
 lazy_static! {
-    pub static ref MARKET_DATA: Mutex<MarketItems> = Mutex::new(MarketItems::new());
-    pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> = Mutex::new(MarketConnectionError::Loading);
+    pub static ref MARKET_DATA: Mutex<MarketItems> =
+        Mutex::new(MarketItems::new());
+    pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> =
+        Mutex::new(MarketConnectionError::Loading);
 }
 
 impl MARKET_DATA {
     pub fn update(&self) {
-        *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Loading;
+        *MARKET_CONNECTION_ERROR.lock().unwrap() =
+            MarketConnectionError::Loading;
 
         let client = reqwest::blocking::Client::new();
         let response = match client.get("http://localhost:8000/get").send() {
             Ok(v) => v,
             Err(_) => {
                 *MARKET_CONNECTION_ERROR.lock().unwrap() =
-                    MarketConnectionError::Show("Could not connect to market server".into());
+                    MarketConnectionError::Show(
+                        "Could not connect to market server".into(),
+                    );
                 return;
             },
         };
 
-        *self.lock().unwrap() =
-            if let Ok(mut v) = serde_json::from_str::<MarketItems>(response.text().unwrap().as_str()) {
-                v.values_mut().into_iter().for_each(|item| {
-                    item.image = Image::from_url(&item.item_image_url);
-                });
+        *self.lock().unwrap() = if let Ok(mut v) =
+            serde_json::from_str::<MarketItems>(
+                response.text().unwrap().as_str(),
+            ) {
+            v.values_mut().into_iter().for_each(|item| {
+                item.image = Image::from_url(&item.item_image_url);
+            });
 
-                v
-            } else {
-                MarketItems::new()
-            };
+            v
+        } else {
+            MarketItems::new()
+        };
 
         *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Hide;
     }
@@ -101,7 +108,8 @@ impl epi::App for MarketDashboard {
                         #[cfg(debug_assertions)]
                         println!(
                             "Market data updated at: {}",
-                            chrono::Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
+                            chrono::Utc::now()
+                                .format("%A %d/%m/%Y %I:%M:%S %p")
                         );
 
                         thread::sleep(Duration::new(30, 0));
@@ -110,8 +118,8 @@ impl epi::App for MarketDashboard {
             );
         }
 
-        ctx.request_repaint(); // we want the GUI to refresh each possible frame due to the market update
-                               // thread
+        ctx.request_repaint(); // we want the GUI to refresh each possible frame due to the market
+                               // update thread
 
         let mut next_state = state.clone();
 
@@ -123,9 +131,12 @@ impl epi::App for MarketDashboard {
 
                 if response.clicked {
                     match state {
-                        State::Profile(acct_status) => next_state = State::Market(acct_status.clone()),
-                        State::Login => next_state = State::Market(AccountState::LoggedOut),
-                        State::ItemPage(acct_status, _) => next_state = State::Market(acct_status.clone()),
+                        State::Profile(acct_status) =>
+                            next_state = State::Market(acct_status.clone()),
+                        State::Login =>
+                            next_state = State::Market(AccountState::LoggedOut),
+                        State::ItemPage(acct_status, _) =>
+                            next_state = State::Market(acct_status.clone()),
                         _ => (),
                     }
                 }
@@ -136,7 +147,13 @@ impl epi::App for MarketDashboard {
         let mut remember = remember;
 
         match state {
-            State::Market(acct_status) => IndexPage::draw(ctx, frame, &username, acct_status, &mut next_state),
+            State::Market(acct_status) => IndexPage::draw(
+                ctx,
+                frame,
+                &username,
+                acct_status,
+                &mut next_state,
+            ),
             State::Login => {
                 LoginPage::draw(
                     ctx,
@@ -148,8 +165,15 @@ impl epi::App for MarketDashboard {
                     (show_bank_connection_error, show_login_error),
                 );
             },
-            State::Profile(acct_status) => ProfilePage::draw(ctx, username, &mut next_state, acct_status),
-            State::ItemPage(acct_status, item) => ItemPage::draw(ctx, username, &mut next_state, acct_status, item),
+            State::Profile(acct_status) =>
+                ProfilePage::draw(ctx, username, &mut next_state, acct_status),
+            State::ItemPage(acct_status, item) => ItemPage::draw(
+                ctx,
+                username,
+                &mut next_state,
+                acct_status,
+                item,
+            ),
         }
 
         if *show_password {
@@ -175,7 +199,8 @@ impl epi::App for MarketDashboard {
         }
 
         match self.state.clone() {
-            State::ItemPage(acct_status, _) | State::Profile(acct_status) => self.state = State::Market(acct_status),
+            State::ItemPage(acct_status, _) | State::Profile(acct_status) =>
+                self.state = State::Market(acct_status),
             State::Login => self.state = State::Market(AccountState::LoggedOut),
             _ => (),
         }

@@ -16,7 +16,8 @@ impl IndexPage {
     ) {
         super::draw_sidebar(ctx, username, next_state, account_status);
 
-        let market_connection_error = MARKET_CONNECTION_ERROR.lock().unwrap().clone();
+        let market_connection_error =
+            MARKET_CONNECTION_ERROR.lock().unwrap().clone();
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {

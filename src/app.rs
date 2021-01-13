@@ -7,17 +7,15 @@ use std::{sync::Mutex, thread, time::Duration};
 
 lazy_static! {
     pub static ref MARKET_DATA: Mutex<MarketItems> = Mutex::new(MarketItems::new());
-    pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> = Mutex::new(MarketConnectionError::Hide);
+    pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> = Mutex::new(MarketConnectionError::Loading);
 }
 
 impl MARKET_DATA {
     pub fn update(&self) {
+        *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Loading;
+
         let client = reqwest::blocking::Client::new();
         let response = match client.get("http://localhost:8000/get").send() {
-            Ok(v) => {
-                *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Hide;
-                v
-            },
             Ok(v) => v,
             Err(_) => {
                 *MARKET_CONNECTION_ERROR.lock().unwrap() =
@@ -175,6 +173,12 @@ impl epi::App for MarketDashboard {
     fn save(&mut self, storage: &mut dyn epi::Storage) {
         if !self.remember {
             *self = Self::default();
+        }
+
+        match self.state.clone() {
+            State::ItemPage(acct_status, _) | State::Profile(acct_status) => self.state = State::Market(acct_status),
+            State::Login => self.state = State::Market(AccountState::LoggedOut),
+            _ => (),
         }
 
         epi::set_value(storage, epi::APP_KEY, self);

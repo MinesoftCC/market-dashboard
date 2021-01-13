@@ -21,6 +21,7 @@ impl Default for LoginError {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MarketConnectionError {
+    Loading,
     Hide,
     Show(String),
 }

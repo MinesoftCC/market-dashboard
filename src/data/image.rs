@@ -10,10 +10,7 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn as_texture(
-        &mut self,
-        frame: &mut epi::Frame<'_>,
-    ) -> Option<egui::TextureId> {
+    pub fn as_texture(&mut self, frame: &mut epi::Frame<'_>) -> Option<egui::TextureId> {
         if self.id.is_none() && self.size != (0, 0) && !self.pixels.is_empty() {
             let texture_allocator = frame.tex_allocator().as_mut().unwrap();
             self.id = Some(texture_allocator.alloc());
@@ -66,11 +63,7 @@ impl Image {
             size,
             pixels: pixels
                 .chunks(4)
-                .map(|p| {
-                    egui::Color32::from_rgba_unmultiplied(
-                        p[0], p[1], p[2], p[3],
-                    )
-                })
+                .map(|p| egui::Color32::from_rgba_unmultiplied(p[0], p[1], p[2], p[3]))
                 .collect(),
         };
 

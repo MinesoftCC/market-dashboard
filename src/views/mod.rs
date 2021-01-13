@@ -19,12 +19,9 @@ fn draw_sidebar(
     egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
         ui.horizontal_wrapped(|ui| match account_status {
             AccountState::LoggedIn => {
-                let mut response =
-                    ui.heading(username.to_string()).on_hover_ui(|ui| {
-                        ui.label(
-                            "Click on your username to go to your profile",
-                        );
-                    });
+                let mut response = ui.heading(username.to_string()).on_hover_ui(|ui| {
+                    ui.label("Click on your username to go to your profile");
+                });
 
                 response = response.interact(egui::Sense::click());
 

@@ -5,33 +5,29 @@ use crate::{
 use std::{sync::Mutex, thread, time::Duration};
 
 lazy_static! {
-    pub static ref MARKET_DATA: Mutex<MarketItems> =
-        Mutex::new(MarketItems::new());
+    pub static ref MARKET_DATA: Mutex<MarketItems> = Mutex::new(MarketItems::new());
     pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> =
         Mutex::new(MarketConnectionError::Loading);
 }
 
 impl MARKET_DATA {
     pub fn update(&self) {
-        *MARKET_CONNECTION_ERROR.lock().unwrap() =
-            MarketConnectionError::Loading;
+        *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Loading;
 
         let client = reqwest::blocking::Client::new();
         let response = match client.get("http://localhost:8000/get").send() {
             Ok(v) => v,
             Err(_) => {
-                *MARKET_CONNECTION_ERROR.lock().unwrap() =
-                    MarketConnectionError::Show(
-                        "Could not connect to market server".into(),
-                    );
+                *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Show(
+                    "Could not connect to market server".into(),
+                );
                 return;
             },
         };
 
         *self.lock().unwrap() = if let Ok(mut v) =
-            serde_json::from_str::<MarketItems>(
-                response.text().unwrap().as_str(),
-            ) {
+            serde_json::from_str::<MarketItems>(response.text().unwrap().as_str())
+        {
             v.values_mut().into_iter().for_each(|item| {
                 item.image = Image::from_url(&item.item_image_url);
             });
@@ -108,8 +104,7 @@ impl epi::App for MarketDashboard {
                         #[cfg(debug_assertions)]
                         println!(
                             "Market data updated at: {}",
-                            chrono::Utc::now()
-                                .format("%A %d/%m/%Y %I:%M:%S %p")
+                            chrono::Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
                         );
 
                         thread::sleep(Duration::new(30, 0));
@@ -167,13 +162,8 @@ impl epi::App for MarketDashboard {
             },
             State::Profile(acct_status) =>
                 ProfilePage::draw(ctx, username, &mut next_state, acct_status),
-            State::ItemPage(acct_status, item) => ItemPage::draw(
-                ctx,
-                username,
-                &mut next_state,
-                acct_status,
-                item,
-            ),
+            State::ItemPage(acct_status, item) =>
+                ItemPage::draw(ctx, username, &mut next_state, acct_status, item),
         }
 
         if *show_password {

@@ -16,8 +16,7 @@ impl IndexPage {
     ) {
         super::draw_sidebar(ctx, username, next_state, account_status);
 
-        let market_connection_error =
-            MARKET_CONNECTION_ERROR.lock().unwrap().clone();
+        let market_connection_error = MARKET_CONNECTION_ERROR.lock().unwrap().clone();
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -41,22 +40,34 @@ impl IndexPage {
                         ui.horizontal_wrapped(|ui| {
                             let market_data = MARKET_DATA.lock().unwrap();
 
-                            let mut items = market_data.values().cloned().collect::<Vec<MarketItem>>();
+                            let mut items = market_data
+                                .values()
+                                .cloned()
+                                .collect::<Vec<MarketItem>>();
 
                             items.sort_by(|a, b| {
-                                let a_dt = DateTime::parse_from_rfc2822(a.time_posted.as_str())
-                                    .expect("Could not parse datetime from post date");
-                                let b_dt = DateTime::parse_from_rfc2822(b.time_posted.as_str())
-                                    .expect("Could not parse datetime from post date");
+                                let a_dt =
+                                    DateTime::parse_from_rfc2822(a.time_posted.as_str())
+                                        .expect(
+                                            "Could not parse datetime from post date",
+                                        );
+                                let b_dt =
+                                    DateTime::parse_from_rfc2822(b.time_posted.as_str())
+                                        .expect(
+                                            "Could not parse datetime from post date",
+                                        );
 
                                 a_dt.cmp(&b_dt)
                             });
+
 
                             items.iter_mut().for_each(|item| {
                                 let mut clicked = false;
                                 let (_, mut response) = ui.vertical(|ui| {
                                     ui.horizontal_wrapped(|ui| {
-                                        if let Some(texture_id) = item.image.as_texture(frame) {
+                                        if let Some(texture_id) =
+                                            item.image.as_texture(frame)
+                                        {
                                             let size = egui::Vec2::new(
                                                 item.image.size.0.min(100) as f32,
                                                 item.image.size.1.min(100) as f32,
@@ -68,23 +79,33 @@ impl IndexPage {
                                         ui.vertical(|ui| {
                                             let item = item.clone();
 
-                                            clicked |= ui.heading(&item.display_name).clicked;
+                                            clicked |=
+                                                ui.heading(&item.display_name).clicked;
                                             clicked |= ui
                                                 .colored_label(
                                                     egui::Color32::LIGHT_GRAY,
-                                                    format!("In-game id: {}", item.item_id),
+                                                    format!(
+                                                        "In-game id: {}",
+                                                        item.item_id
+                                                    ),
                                                 )
                                                 .clicked;
                                             clicked |= ui
                                                 .colored_label(
                                                     egui::Color32::LIGHT_GRAY,
-                                                    format!("Price: {} per item", item.price),
+                                                    format!(
+                                                        "Price: {} per item",
+                                                        item.price
+                                                    ),
                                                 )
                                                 .clicked;
                                             clicked |= ui
                                                 .colored_label(
                                                     egui::Color32::LIGHT_GRAY,
-                                                    format!("Quantity: {}", item.quantity),
+                                                    format!(
+                                                        "Quantity: {}",
+                                                        item.quantity
+                                                    ),
                                                 )
                                                 .clicked;
                                             clicked |= ui
@@ -92,9 +113,14 @@ impl IndexPage {
                                                     egui::Color32::LIGHT_GRAY,
                                                     format!(
                                                         "Time posted: {}",
-                                                        DateTime::parse_from_rfc2822(item.time_posted.as_str())
-                                                            .expect("Could not parse datetime from post date")
-                                                            .naive_local()
+                                                        DateTime::parse_from_rfc2822(
+                                                            item.time_posted.as_str()
+                                                        )
+                                                        .expect(
+                                                            "Could not parse datetime \
+                                                             from post date"
+                                                        )
+                                                        .naive_local()
                                                     ),
                                                 )
                                                 .clicked;
@@ -102,16 +128,24 @@ impl IndexPage {
                                     });
                                 });
 
-                                response.id =
-                                    egui::Id::new(format!("{}{}{}", item.poster_id, item.item_id, item.time_posted));
+                                response.id = egui::Id::new(format!(
+                                    "{}{}{}",
+                                    item.poster_id, item.item_id, item.time_posted
+                                ));
                                 response = response.interact(egui::Sense::click());
 
                                 if response.clicked || clicked {
-                                    *next_state = State::ItemPage(account_status.clone(), item.clone());
+                                    *next_state = State::ItemPage(
+                                        account_status.clone(),
+                                        item.clone(),
+                                    );
                                 }
 
                                 response.on_hover_ui(|ui| {
-                                    ui.label(format!("Click to go to the page for {}", item.display_name));
+                                    ui.label(format!(
+                                        "Click to go to the page for {}",
+                                        item.display_name
+                                    ));
                                 });
                             });
                         });

@@ -1,5 +1,5 @@
 use crate::{
-    data::{errors::*, states::*, MarketItems},
+    data::{errors::*, image::*, states::*, MarketItems},
     views::{IndexPage, ItemPage, LoginPage, ProfilePage},
 };
 use chrono::prelude::*;
@@ -18,6 +18,7 @@ impl MARKET_DATA {
                 *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Hide;
                 v
             },
+            Ok(v) => v,
             Err(_) => {
                 *MARKET_CONNECTION_ERROR.lock().unwrap() =
                     MarketConnectionError::Show("Could not connect to market server".into());
@@ -25,13 +26,18 @@ impl MARKET_DATA {
             },
         };
 
-        let market_items = if let Ok(v) = serde_json::from_str(response.text().unwrap().as_str()) {
-            v
-        } else {
-            MarketItems::new()
-        };
+        *self.lock().unwrap() =
+            if let Ok(mut v) = serde_json::from_str::<MarketItems>(response.text().unwrap().as_str()) {
+                v.values_mut().into_iter().for_each(|item| {
+                    item.image = Image::from_url(&item.item_image_url);
+                });
 
-        *self.lock().unwrap() = market_items;
+                v
+            } else {
+                MarketItems::new()
+            };
+
+        *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Hide;
     }
 }
 
@@ -57,7 +63,7 @@ impl Default for MarketDashboard {
         Self {
             username: "".into(),
             password: "".into(),
-            password_colour: egui::color::Color32::TRANSPARENT,
+            password_colour: egui::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
             state: State::Market(AccountState::LoggedOut),
@@ -89,12 +95,26 @@ impl epi::App for MarketDashboard {
         } = self;
 
         if market_update_thread.is_none() {
-            *market_update_thread = Some(thread::spawn(|| loop {
-                MARKET_DATA.update();
-                println!("Market data updated at: {}", Utc::now().time());
-                thread::sleep(Duration::new(60, 0));
-            }));
+            *market_update_thread = Some(
+                thread::Builder::new()
+                    .name("market_update_thread".into())
+                    .spawn(|| loop {
+                        MARKET_DATA.update();
+
+                        #[cfg(debug_assertions)]
+                        println!(
+                            "Market data updated at: {}",
+                            Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
+                        );
+
+                        thread::sleep(Duration::new(30, 0));
+                    })
+                    .unwrap(),
+            );
         }
+
+        ctx.request_repaint(); // we want the GUI to refresh each possible frame due to the market update
+                               // thread
 
         let mut next_state = state.clone();
 
@@ -119,7 +139,7 @@ impl epi::App for MarketDashboard {
         let mut remember = remember;
 
         match state {
-            State::Market(acct_status) => IndexPage::draw(ctx, &username, acct_status, &mut next_state),
+            State::Market(acct_status) => IndexPage::draw(ctx, frame, &username, acct_status, &mut next_state),
             State::Login => {
                 LoginPage::draw(
                     ctx,

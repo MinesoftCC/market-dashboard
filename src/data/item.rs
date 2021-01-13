@@ -1,3 +1,5 @@
+use super::image::Image;
+
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct MarketItem {
     pub item_id: String,
@@ -7,4 +9,6 @@ pub struct MarketItem {
     pub price: u32,
     pub poster_id: u16,
     pub time_posted: String,
+    #[serde(skip)]
+    pub image: Image,
 }

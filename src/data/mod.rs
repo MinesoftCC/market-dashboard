@@ -1,4 +1,5 @@
 pub mod errors;
+pub mod image;
 pub mod item;
 pub mod states;
 pub mod user;

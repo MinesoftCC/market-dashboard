@@ -125,15 +125,15 @@ impl LoginPage {
             }
 
             if password.is_empty() || username.is_empty() {
-                ui.colored_label(egui::color::Color32::YELLOW, "Both fields are required to be filled");
+                ui.colored_label(egui::Color32::YELLOW, "Both fields are required to be filled");
             }
 
             if let BankConnectionError::Show(message) = show_bank_connection_error {
-                ui.colored_label(egui::color::Color32::RED, message.clone());
+                ui.colored_label(egui::Color32::RED, message.clone());
             }
 
             if let LoginError::Fail = show_login_error {
-                ui.colored_label(egui::color::Color32::RED, "Password or username was incorrect");
+                ui.colored_label(egui::Color32::RED, "Password or username was incorrect");
             }
         });
     }

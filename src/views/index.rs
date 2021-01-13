@@ -32,7 +32,7 @@ impl IndexPage {
                 },
                 MarketConnectionError::Show(message) => {
                     ui.vertical_centered_justified(|ui| {
-                        ui.colored_label(egui::color::Color32::RED, message.clone());
+                        ui.colored_label(egui::Color32::RED, message.clone());
                     });
                 },
                 MarketConnectionError::Hide => {

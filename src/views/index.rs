@@ -11,6 +11,7 @@ impl IndexPage {
         ctx: &egui::CtxRef,
         frame: &mut epi::Frame<'_>,
         username: &str,
+        search_term: &mut String,
         account_status: &mut AccountState,
         next_state: &mut State,
     ) {
@@ -23,6 +24,9 @@ impl IndexPage {
                 if ui.button("Refresh market").clicked {
                     MARKET_DATA.update();
                 }
+
+                ui.label("Search: ");
+                ui.text_edit_singleline(search_term);
             });
             ui.separator();
 
@@ -60,6 +64,17 @@ impl IndexPage {
                                 a_dt.cmp(&b_dt)
                             });
 
+                            if !search_term.is_empty() {
+                                items = items
+                                    .iter()
+                                    .filter(|item| {
+                                        item.display_name
+                                            .to_lowercase()
+                                            .contains(&search_term.to_lowercase())
+                                    })
+                                    .cloned()
+                                    .collect();
+                            }
 
                             items.iter_mut().for_each(|item| {
                                 let mut clicked = false;

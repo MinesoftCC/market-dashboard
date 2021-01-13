@@ -45,6 +45,7 @@ impl MARKET_DATA {
 pub struct MarketDashboard {
     pub username: String,
     pub password: String,
+    pub search_term: String,
     #[serde(skip)]
     pub password_colour: egui::Color32,
     pub show_password: bool,
@@ -63,6 +64,7 @@ impl Default for MarketDashboard {
         Self {
             username: "".into(),
             password: "".into(),
+            search_term: "".into(),
             password_colour: egui::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
@@ -85,6 +87,7 @@ impl epi::App for MarketDashboard {
         let MarketDashboard {
             username,
             password,
+            search_term,
             show_password,
             remember,
             password_colour,
@@ -146,6 +149,7 @@ impl epi::App for MarketDashboard {
                 ctx,
                 frame,
                 &username,
+                search_term,
                 acct_status,
                 &mut next_state,
             ),

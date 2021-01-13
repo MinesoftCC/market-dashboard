@@ -10,7 +10,7 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn to_texture(&mut self, frame: &mut epi::Frame<'_>) -> Option<egui::TextureId> {
+    pub fn as_texture(&mut self, frame: &mut epi::Frame<'_>) -> Option<egui::TextureId> {
         if self.id.is_none() && self.size != (0, 0) && !self.pixels.is_empty() {
             let texture_allocator = frame.tex_allocator().as_mut().unwrap();
             self.id = Some(texture_allocator.alloc());
@@ -21,7 +21,7 @@ impl Image {
         self.id
     }
 
-    pub fn from_url(url: &String) -> Self {
+    pub fn from_url(url: &str) -> Self {
         use image::GenericImageView;
 
         let client = reqwest::blocking::Client::new();
@@ -37,7 +37,7 @@ impl Image {
 
         let response_bytes = response.to_vec();
 
-        let image = if let Some(i) = image::load_from_memory(&response_bytes).ok() {
+        let image = if let Ok(i) = image::load_from_memory(&response_bytes) {
             i
         } else {
             eprintln!("Could not build image from response bytes");

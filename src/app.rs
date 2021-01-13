@@ -2,7 +2,6 @@ use crate::{
     data::{errors::*, image::*, states::*, MarketItems},
     views::{IndexPage, ItemPage, LoginPage, ProfilePage},
 };
-use chrono::prelude::*;
 use std::{sync::Mutex, thread, time::Duration};
 
 lazy_static! {
@@ -102,7 +101,7 @@ impl epi::App for MarketDashboard {
                         #[cfg(debug_assertions)]
                         println!(
                             "Market data updated at: {}",
-                            Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
+                            chrono::Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
                         );
 
                         thread::sleep(Duration::new(30, 0));

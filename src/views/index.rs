@@ -23,8 +23,6 @@ impl IndexPage {
                 if ui.button("Refresh market").clicked {
                     MARKET_DATA.update();
                 }
-
-                // ui.text_edit_singleline();
             });
             ui.separator();
 
@@ -42,10 +40,7 @@ impl IndexPage {
                         ui.horizontal_wrapped(|ui| {
                             let market_data = MARKET_DATA.lock().unwrap();
 
-                            let mut items = market_data
-                                .values()
-                                .map(|item| item.clone())
-                                .collect::<Vec<MarketItem>>();
+                            let mut items = market_data.values().cloned().collect::<Vec<MarketItem>>();
 
                             items.sort_by(|a, b| {
                                 let a_dt = DateTime::parse_from_rfc2822(a.time_posted.as_str())
@@ -60,7 +55,7 @@ impl IndexPage {
                                 let mut clicked = false;
                                 let (_, mut response) = ui.vertical(|ui| {
                                     ui.horizontal_wrapped(|ui| {
-                                        if let Some(texture_id) = item.image.to_texture(frame) {
+                                        if let Some(texture_id) = item.image.as_texture(frame) {
                                             let size = egui::Vec2::new(
                                                 item.image.size.0.min(100) as f32,
                                                 item.image.size.1.min(100) as f32,

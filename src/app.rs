@@ -13,7 +13,7 @@ lazy_static! {
         perms: 0,
     });
     pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> =
-        Mutex::new(MarketConnectionError::Loading);
+        Mutex::new(MarketConnectionError::Hide);
     pub static ref BANK_CONNECTION_ERROR: Mutex<BankConnectionError> =
         Mutex::new(BankConnectionError::Hide);
 }
@@ -62,8 +62,6 @@ impl USER_DATA {
 
 impl MARKET_DATA {
     pub fn update(&self) {
-        *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Loading;
-
         let client = reqwest::blocking::Client::new();
         let response = match client.get("http://localhost:8000/get").send() {
             Ok(v) => v,

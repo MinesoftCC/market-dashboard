@@ -36,9 +36,6 @@ impl IndexPage {
             ui.separator();
 
             match market_connection_error {
-                MarketConnectionError::Loading => {
-                    ui.vertical_centered(|ui| ui.heading("Loading market data..."));
-                },
                 MarketConnectionError::Show(message) => {
                     ui.vertical_centered_justified(|ui| {
                         ui.colored_label(egui::Color32::RED, message.clone());
@@ -46,7 +43,7 @@ impl IndexPage {
                 },
                 MarketConnectionError::Hide => {
                     egui::ScrollArea::auto_sized().show(ui, |ui| {
-                        ui.vertical_centered_justified(|ui| {
+                        ui.vertical_centered(|ui| {
                             let market_data = MARKET_DATA.lock().unwrap();
 
                             let mut items = market_data

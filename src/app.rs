@@ -1,13 +1,63 @@
 use crate::{
-    data::{errors::*, image::*, states::*, MarketItems},
+    data::{errors::*, image::*, states::*, user::*, MarketItems},
     views::{IndexPage, ItemPage, LoginPage, ProfilePage},
 };
 use std::{sync::Mutex, thread, time::Duration};
 
 lazy_static! {
     pub static ref MARKET_DATA: Mutex<MarketItems> = Mutex::new(MarketItems::new());
+    pub static ref USER_DATA: Mutex<User> = Mutex::new(User {
+        username: "".into(),
+        id: 0,
+        balance: 0,
+        perms: 0,
+    });
     pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> =
         Mutex::new(MarketConnectionError::Loading);
+    pub static ref BANK_CONNECTION_ERROR: Mutex<BankConnectionError> =
+        Mutex::new(BankConnectionError::Hide);
+}
+
+impl USER_DATA {
+    pub fn update(&self, name: &str) {
+        #[derive(serde::Deserialize)]
+        struct Response {
+            balance: i32,
+            name: String,
+            perm_count: i32,
+        };
+
+        let name = if !self.lock().unwrap().username.is_empty() {
+            self.lock().unwrap().username.clone()
+        } else {
+            name.to_string()
+        };
+
+        let id = LoginPage::get_user_id(&name);
+
+        let client = reqwest::blocking::Client::new();
+        let response: Response = if let Ok(v) = serde_json::from_str(
+            match client
+                .get(format!("http://157.90.30.90/bankapi/total/{}", id).as_str())
+                .send()
+            {
+                Ok(v) => v.text().unwrap(),
+                Err(_) => return,
+            }
+            .as_str(),
+        ) {
+            v
+        } else {
+            return;
+        };
+
+        *USER_DATA.lock().unwrap() = User {
+            username: response.name.clone(),
+            balance: response.balance,
+            perms: response.perm_count,
+            id,
+        };
+    }
 }
 
 impl MARKET_DATA {
@@ -45,6 +95,7 @@ impl MARKET_DATA {
 pub struct MarketDashboard {
     pub username: String,
     pub password: String,
+    #[serde(skip)]
     pub search_term: String,
     #[serde(skip)]
     pub password_colour: egui::Color32,
@@ -52,11 +103,11 @@ pub struct MarketDashboard {
     pub remember: bool,
     pub state: State,
     #[serde(skip)]
-    pub show_bank_connection_error: BankConnectionError,
-    #[serde(skip)]
     pub show_login_error: LoginError,
     #[serde(skip)]
     market_update_thread: Option<thread::JoinHandle<()>>,
+    #[serde(skip)]
+    user_update_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Default for MarketDashboard {
@@ -69,9 +120,9 @@ impl Default for MarketDashboard {
             show_password: false,
             remember: false,
             state: State::Market(AccountState::LoggedOut),
-            show_bank_connection_error: BankConnectionError::Hide,
             show_login_error: LoginError::None,
             market_update_thread: None,
+            user_update_thread: None,
         }
     }
 }
@@ -84,6 +135,8 @@ impl epi::App for MarketDashboard {
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
+        ctx.request_repaint();
+
         let MarketDashboard {
             username,
             password,
@@ -92,16 +145,16 @@ impl epi::App for MarketDashboard {
             remember,
             password_colour,
             state,
-            show_bank_connection_error,
             show_login_error,
             market_update_thread,
+            user_update_thread,
         } = self;
 
         if market_update_thread.is_none() {
             *market_update_thread = Some(
                 thread::Builder::new()
                     .name("market_update_thread".into())
-                    .spawn(|| loop {
+                    .spawn(move || loop {
                         MARKET_DATA.update();
 
                         #[cfg(debug_assertions)]
@@ -116,8 +169,32 @@ impl epi::App for MarketDashboard {
             );
         }
 
-        ctx.request_repaint(); // we want the GUI to refresh each possible frame due to the market
-                               // update thread
+        match state {
+            State::Market(acct_status)
+            | State::Profile(acct_status)
+            | State::ItemPage(acct_status, _) => {
+                if *acct_status == AccountState::LoggedIn && user_update_thread.is_none()
+                {
+                    let username = username.clone();
+                    *user_update_thread = Some(
+                        thread::Builder::new()
+                            .spawn(move || loop {
+                                USER_DATA.update(&username);
+
+                                #[cfg(debug_assertions)]
+                                println!(
+                                    "User data updated at: {}",
+                                    chrono::Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
+                                );
+
+                                thread::sleep(Duration::new(30, 0));
+                            })
+                            .unwrap(),
+                    );
+                }
+            },
+            _ => (),
+        }
 
         let mut next_state = state.clone();
 
@@ -156,12 +233,11 @@ impl epi::App for MarketDashboard {
             State::Login => {
                 LoginPage::draw(
                     ctx,
-                    frame,
                     (username, password),
                     (&mut show_password, &mut remember),
                     password_colour,
                     &mut next_state,
-                    (show_bank_connection_error, show_login_error),
+                    show_login_error,
                 );
             },
             State::Profile(acct_status) =>
@@ -171,14 +247,13 @@ impl epi::App for MarketDashboard {
         }
 
         if *show_password {
-            *password_colour = egui::color::Color32::LIGHT_GRAY;
+            *password_colour = egui::Color32::LIGHT_GRAY;
         } else {
-            *password_colour = egui::color::Color32::TRANSPARENT;
+            *password_colour = egui::Color32::TRANSPARENT;
         }
 
         self.show_password = *show_password;
         self.remember = *remember;
-        self.show_bank_connection_error = show_bank_connection_error.clone();
 
         *state = next_state;
     }
@@ -193,9 +268,20 @@ impl epi::App for MarketDashboard {
         }
 
         match self.state.clone() {
-            State::ItemPage(acct_status, _) | State::Profile(acct_status) =>
-                self.state = State::Market(acct_status),
-            State::Login => self.state = State::Market(AccountState::LoggedOut),
+            State::ItemPage(acct_status, _) | State::Profile(acct_status) => {
+                self.state = State::Market(acct_status.clone());
+
+                if acct_status == AccountState::LoggedOut {
+                    self.username = "".into();
+                    self.password = "".into();
+                }
+            },
+            State::Login => {
+                self.state = State::Market(AccountState::LoggedOut);
+
+                self.username = "".into();
+                self.password = "".into();
+            },
             _ => (),
         }
 

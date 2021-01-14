@@ -1,6 +1,6 @@
 use super::image::Image;
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(PartialEq, serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct MarketItem {
     pub item_id: String,
     pub item_image_url: String,

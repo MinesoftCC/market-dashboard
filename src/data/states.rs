@@ -1,12 +1,12 @@
 use super::item::MarketItem;
 
-#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
+#[derive(PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum AccountState {
     LoggedOut,
     LoggedIn,
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
+#[derive(PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub enum State {
     Market(AccountState),
     Login,

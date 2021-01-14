@@ -23,10 +23,15 @@ impl IndexPage {
             ui.horizontal(|ui| {
                 if ui.button("Refresh market").clicked {
                     MARKET_DATA.update();
+                    frame.repaint_signal().request_repaint();
                 }
 
                 ui.label("Search: ");
                 ui.text_edit_singleline(search_term);
+
+                if ui.small_button(" X ").clicked {
+                    *search_term = "".into();
+                }
             });
             ui.separator();
 
@@ -41,7 +46,7 @@ impl IndexPage {
                 },
                 MarketConnectionError::Hide => {
                     egui::ScrollArea::auto_sized().show(ui, |ui| {
-                        ui.horizontal_wrapped(|ui| {
+                        ui.vertical_centered_justified(|ui| {
                             let market_data = MARKET_DATA.lock().unwrap();
 
                             let mut items = market_data
@@ -141,6 +146,7 @@ impl IndexPage {
                                                 .clicked;
                                         });
                                     });
+                                    ui.separator();
                                 });
 
                                 response.id = egui::Id::new(format!(

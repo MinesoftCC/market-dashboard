@@ -8,7 +8,7 @@ pub use item_page::*;
 pub use login::*;
 pub use profile::*;
 
-use crate::data::states::*;
+use crate::{app::USER_DATA, data::states::*};
 
 fn draw_sidebar(
     ctx: &egui::CtxRef,
@@ -16,9 +16,9 @@ fn draw_sidebar(
     next_state: &mut State,
     account_status: &mut AccountState,
 ) {
-    egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| {
-        ui.horizontal_wrapped(|ui| match account_status {
-            AccountState::LoggedIn => {
+    egui::SidePanel::left("side_panel", 200.0).show(ctx, |ui| match account_status {
+        AccountState::LoggedIn => {
+            ui.horizontal_wrapped(|ui| {
                 let mut response = ui.heading(username.to_string()).on_hover_ui(|ui| {
                     ui.label("Click on your username to go to your profile");
                 });
@@ -34,14 +34,21 @@ fn draw_sidebar(
                 }
 
                 if ui.button("Add item").clicked {}
-            },
-            AccountState::LoggedOut => {
+            });
+
+            ui.label(format!(
+                "Current balance: {}",
+                USER_DATA.lock().unwrap().balance
+            ));
+        },
+        AccountState::LoggedOut => {
+            ui.horizontal_wrapped(|ui| {
                 ui.heading("Logged out".to_string());
 
                 if ui.button("Log in").clicked {
                     *next_state = State::Login;
                 }
-            },
-        });
+            });
+        },
     });
 }

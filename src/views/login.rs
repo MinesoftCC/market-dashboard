@@ -1,4 +1,7 @@
-use crate::data::{errors::*, states::*};
+use crate::{
+    app::{BANK_CONNECTION_ERROR, USER_DATA},
+    data::{errors::*, states::*},
+};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct BankResponse {
@@ -9,17 +12,14 @@ pub struct BankResponse {
 pub struct LoginPage;
 
 impl LoginPage {
-    fn get_user_id(
-        username: &str,
-        show_bank_connection_error: &mut BankConnectionError,
-    ) -> i32 {
+    pub fn get_user_id(username: &str) -> i32 {
         let client = reqwest::blocking::Client::new();
         let mut user_id = 0;
 
         let response = match client.get("http://157.90.30.90/bankapi/listusers").send() {
             Ok(v) => v,
             Err(_) => {
-                *show_bank_connection_error = BankConnectionError::Show(
+                *BANK_CONNECTION_ERROR.lock().unwrap() = BankConnectionError::Show(
                     "Could not connect to bank server to get user ID".into(),
                 );
                 return user_id;
@@ -39,6 +39,8 @@ impl LoginPage {
             }
         });
 
+        USER_DATA.lock().unwrap().id = user_id;
+
         user_id
     }
 
@@ -46,28 +48,26 @@ impl LoginPage {
         username: &str,
         password: &str,
         next_state: &mut State,
-        show_bank_connection_error: &mut BankConnectionError,
         show_login_error: &mut LoginError,
     ) {
+        let id = Self::get_user_id(username);
+
         let client = reqwest::blocking::Client::new();
         let response = client
             .get(
-                format!(
-                    "http://157.90.30.90/BankAPI/verifypass/{}/{}",
-                    Self::get_user_id(username, show_bank_connection_error),
-                    password
-                )
-                .as_str(),
+                format!("http://157.90.30.90/BankAPI/verifypass/{}/{}", id, password)
+                    .as_str(),
             )
             .send();
 
         match response {
             Ok(response) => {
                 if !response.status().is_success() {
-                    *show_bank_connection_error = BankConnectionError::Show(format!(
-                        "Server responded with a {} code",
-                        response.status().as_str()
-                    ));
+                    *BANK_CONNECTION_ERROR.lock().unwrap() =
+                        BankConnectionError::Show(format!(
+                            "Server responded with a {} code",
+                            response.status().as_str()
+                        ));
                     return;
                 }
 
@@ -75,7 +75,7 @@ impl LoginPage {
                     serde_json::from_str(response.text().unwrap().as_str()).unwrap();
 
                 if response.value == 1 {
-                    *show_bank_connection_error = BankConnectionError::Hide;
+                    *BANK_CONNECTION_ERROR.lock().unwrap() = BankConnectionError::Hide;
                     *show_login_error = LoginError::Success;
                     *next_state = State::Market(AccountState::LoggedIn);
                 } else {
@@ -83,26 +83,30 @@ impl LoginPage {
                 }
             },
             Err(error) => {
-                *show_bank_connection_error = BankConnectionError::Show(format!(
-                    "Could not contact server. Error message:\n{}",
-                    format!("{:?}", error).replace(password, "[REDACTED]")
-                ));
+                *BANK_CONNECTION_ERROR.lock().unwrap() =
+                    BankConnectionError::Show(format!(
+                        "Could not contact server. Error message:\n{}",
+                        format!("{:?}", error).replace(password, "[REDACTED]")
+                    ));
+                return;
             },
         }
+
+        USER_DATA.lock().unwrap().username = username.into();
+        USER_DATA.lock().unwrap().id = id;
+        USER_DATA.update(&username);
     }
 
     pub fn draw(
         ctx: &egui::CtxRef,
-        _frame: &mut epi::Frame<'_>,
         user_data: (&mut String, &mut String),
         password_states: (&mut bool, &mut bool),
         password_colour: &mut egui::Color32,
         next_state: &mut State,
-        error_states: (&mut BankConnectionError, &mut LoginError),
+        show_login_error: &mut LoginError,
     ) {
         let (username, password) = user_data;
         let (show_password, remember) = password_states;
-        let (show_bank_connection_error, show_login_error) = error_states;
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Login");
@@ -122,13 +126,7 @@ impl LoginPage {
 
             if ui.button("Login").clicked && !password.is_empty() && !username.is_empty()
             {
-                Self::get_user_data(
-                    username,
-                    password,
-                    next_state,
-                    show_bank_connection_error,
-                    show_login_error,
-                );
+                Self::get_user_data(username, password, next_state, show_login_error);
             }
 
             if password.is_empty() || username.is_empty() {
@@ -138,7 +136,9 @@ impl LoginPage {
                 );
             }
 
-            if let BankConnectionError::Show(message) = show_bank_connection_error {
+            if let BankConnectionError::Show(message) =
+                BANK_CONNECTION_ERROR.lock().unwrap().clone()
+            {
                 ui.colored_label(egui::Color32::RED, message.clone());
             }
 

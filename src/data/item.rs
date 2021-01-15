@@ -30,6 +30,10 @@ impl Display for ItemRatio {
 
 #[derive(Default, PartialEq, serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct MarketItem {
+    #[serde(skip)]
+    pub uid: String,
+    #[serde(skip)]
+    pub deleted: bool,
     pub item_id: String,
     pub item_image_url: String,
     pub display_name: String,

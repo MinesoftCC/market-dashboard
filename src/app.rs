@@ -1,8 +1,15 @@
 use crate::{
     data::{errors::*, image::*, item::MarketItem, states::*, user::*, MarketItems},
     views::{AddItemPage, IndexPage, ItemPage, LoginPage, ProfilePage},
+    THREAD_UPDATE_SYNC,
 };
-use std::{sync::Mutex, thread, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicU8, Ordering},
+        Mutex,
+    },
+    thread,
+};
 
 lazy_static! {
     pub static ref MARKET_DATA: Mutex<MarketItems> = Mutex::new(MarketItems::new());
@@ -16,6 +23,28 @@ lazy_static! {
         Mutex::new(MarketConnectionError::Hide);
     pub static ref BANK_CONNECTION_ERROR: Mutex<BankConnectionError> =
         Mutex::new(BankConnectionError::Hide);
+    pub static ref CLOSE_MARKET_THREAD: Mutex<bool> = Mutex::new(false);
+    pub static ref CLOSE_USER_THREAD: Mutex<bool> = Mutex::new(true);
+    pub static ref USER_THREAD_COUNT: Mutex<AtomicU8> = Mutex::new(AtomicU8::new(0));
+    pub static ref USER_VEC: Mutex<Vec<String>> = Mutex::new(Vec::new());
+}
+
+impl USER_VEC {
+    pub fn update(&self) {
+        self.lock().unwrap().clear();
+
+        *self.lock().unwrap() = if let Ok(v) = serde_json::from_str(
+            reqwest::blocking::get("http://157.90.30.90/bankapi/listusers")
+                .unwrap()
+                .text()
+                .unwrap()
+                .as_str(),
+        ) {
+            v
+        } else {
+            Vec::default()
+        }
+    }
 }
 
 impl USER_DATA {
@@ -34,6 +63,8 @@ impl USER_DATA {
 
         if logout {
             *self.lock().unwrap() = User::default();
+            *CLOSE_USER_THREAD.lock().unwrap() = true;
+            return;
         }
 
         let name = if !self.lock().unwrap().username.is_empty() {
@@ -43,7 +74,6 @@ impl USER_DATA {
         };
 
         let id = LoginPage::get_user_id(&name);
-
         let client = reqwest::blocking::Client::new();
         let response: Response = if let Ok(v) = serde_json::from_str(
             match client
@@ -51,12 +81,16 @@ impl USER_DATA {
                 .send()
             {
                 Ok(v) => v.text().unwrap(),
-                Err(_) => return,
+                Err(_) => {
+                    *CLOSE_USER_THREAD.lock().unwrap() = true;
+                    return;
+                },
             }
             .as_str(),
         ) {
             v
         } else {
+            *CLOSE_USER_THREAD.lock().unwrap() = true;
             return;
         };
 
@@ -82,17 +116,41 @@ impl MARKET_DATA {
             },
         };
 
-        *self.lock().unwrap() = if let Ok(mut v) =
+        if let Ok(v) =
             serde_json::from_str::<MarketItems>(response.text().unwrap().as_str())
         {
-            v.values_mut().into_iter().for_each(|item| {
-                item.image = Image::from_url(&item.item_image_url);
-            });
+            v.into_iter().for_each(|(key, value)| {
+                let mut self_lock = self.lock().unwrap();
 
-            v
-        } else {
-            MarketItems::new()
-        };
+                if self_lock.contains_key(&key) {
+                    let item = self_lock.get(&key).unwrap();
+                    if item.image.pixels.is_empty()
+                        && !value.image.pixels.is_empty()
+                        && item.image.pixels != value.image.pixels
+                    {
+                        let a = self_lock.insert(key, value);
+
+                        drop(a);
+                    }
+                } else {
+                    self_lock.insert(key, value);
+                }
+            });
+        }
+
+        self.lock().unwrap().retain(|_, item| !item.deleted);
+
+        self.lock().unwrap().iter_mut().for_each(|(_, item)| {
+            if item.image.pixels.is_empty() {
+                #[cfg(debug_assertions)]
+                println!(
+                    "Updating image for {} uploaded by user ID {}",
+                    item.display_name, item.poster_id
+                );
+
+                item.image = Image::from_url(&item.item_image_url);
+            }
+        });
 
         *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Hide;
     }
@@ -100,26 +158,40 @@ impl MARKET_DATA {
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct MarketDashboard {
-    pub username: String,
+    // general
     pub password: String,
-    #[serde(skip)]
-    pub search_term: String,
-    #[serde(skip)]
-    pub password_colour: egui::Color32,
-    pub show_password: bool,
-    pub remember: bool,
     pub state: State,
-    #[serde(skip)]
-    pub show_login_error: LoginError,
+    pub username: String,
+    // --
+    // background update threads
     #[serde(skip)]
     market_update_thread: Option<thread::JoinHandle<()>>,
     #[serde(skip)]
     user_update_thread: Option<thread::JoinHandle<()>>,
-    // add_item specific
+    // --
+    // index page specific
+    #[serde(skip)]
+    pub search_term: String,
+    #[serde(skip)]
+    pub refresh: bool,
+    #[serde(skip)]
+    pub delete_prompt_state: DeletePromptState,
+    // --
+    // login page specific
+    #[serde(skip)]
+    pub password_colour: egui::Color32,
+    #[serde(skip)]
+    pub show_password: bool,
+    pub remember: bool,
+    #[serde(skip)]
+    pub show_login_error: LoginError,
+    // --
+    // add item page specific
     #[serde(skip)]
     pub item: MarketItem,
     #[serde(skip)]
     pub item_ratio: u32,
+    // --
 }
 
 impl Default for MarketDashboard {
@@ -131,7 +203,9 @@ impl Default for MarketDashboard {
             password_colour: egui::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
+            refresh: false,
             state: State::Market(AccountState::LoggedOut),
+            delete_prompt_state: DeletePromptState::Hide,
             show_login_error: LoginError::None,
             market_update_thread: None,
             user_update_thread: None,
@@ -144,6 +218,8 @@ impl Default for MarketDashboard {
 impl epi::App for MarketDashboard {
     fn on_exit(&mut self) {
         if self.market_update_thread.is_some() {
+            *CLOSE_MARKET_THREAD.lock().unwrap() = true;
+
             self.market_update_thread = None;
         }
 
@@ -181,8 +257,10 @@ impl epi::App for MarketDashboard {
             search_term,
             show_password,
             remember,
+            refresh,
             password_colour,
             state,
+            delete_prompt_state,
             show_login_error,
             market_update_thread,
             user_update_thread,
@@ -201,7 +279,13 @@ impl epi::App for MarketDashboard {
             *market_update_thread = Some(
                 thread::Builder::new()
                     .name("market_update_thread".into())
-                    .spawn(move || loop {
+                    .spawn(move || 'a: loop {
+                        if *CLOSE_MARKET_THREAD.lock().unwrap() {
+                            #[cfg(debug_assertions)]
+                            println!("Closed market update thread");
+                            break 'a;
+                        }
+
                         MARKET_DATA.update();
 
                         #[cfg(debug_assertions)]
@@ -210,7 +294,7 @@ impl epi::App for MarketDashboard {
                             chrono::Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
                         );
 
-                        thread::sleep(Duration::new(30, 0));
+                        while !*THREAD_UPDATE_SYNC.read().unwrap() {}
                     })
                     .unwrap(),
             );
@@ -221,21 +305,70 @@ impl epi::App for MarketDashboard {
             | State::Profile(acct_status)
             | State::Item(acct_status, _)
             | State::AddItem(acct_status) => {
-                if *acct_status == AccountState::LoggedIn && user_update_thread.is_none()
-                {
+                let closed = *CLOSE_USER_THREAD.lock().unwrap();
+
+                if *acct_status == AccountState::LoggedIn && closed {
+                    *CLOSE_USER_THREAD.lock().unwrap() = false;
                     let username = username.clone();
                     *user_update_thread = Some(
                         thread::Builder::new()
-                            .spawn(move || loop {
-                                USER_DATA.update(&username, false);
+                            .spawn(move || {
+                                *USER_THREAD_COUNT.lock().unwrap().get_mut() += 1;
+                                'a: loop {
+                                    if *CLOSE_USER_THREAD.lock().unwrap() {
+                                        #[cfg(debug_assertions)]
+                                        println!("Closed user update thread");
 
-                                #[cfg(debug_assertions)]
-                                println!(
-                                    "User data updated at: {}",
-                                    chrono::Utc::now().format("%A %d/%m/%Y %I:%M:%S %p")
-                                );
+                                        *USER_THREAD_COUNT.lock().unwrap().get_mut() -= 1;
 
-                                thread::sleep(Duration::new(30, 0));
+                                        #[cfg(debug_assertions)]
+                                        println!(
+                                            "Current user thread count: {}",
+                                            USER_THREAD_COUNT
+                                                .lock()
+                                                .unwrap()
+                                                .load(Ordering::SeqCst)
+                                        );
+                                        break 'a;
+                                    }
+
+                                    if USER_THREAD_COUNT
+                                        .lock()
+                                        .unwrap()
+                                        .load(Ordering::SeqCst)
+                                        > 1
+                                    {
+                                        #[cfg(debug_assertions)]
+                                        println!(
+                                            "Closed user update thread. Already have a \
+                                             thread running."
+                                        );
+
+                                        *USER_THREAD_COUNT.lock().unwrap().get_mut() -= 1;
+
+                                        #[cfg(debug_assertions)]
+                                        println!(
+                                            "Current user thread count: {}",
+                                            USER_THREAD_COUNT
+                                                .lock()
+                                                .unwrap()
+                                                .load(Ordering::SeqCst)
+                                        );
+                                        break 'a;
+                                    }
+
+                                    USER_DATA.update(&username, false);
+                                    USER_VEC.update();
+
+                                    #[cfg(debug_assertions)]
+                                    println!(
+                                        "User data updated at: {}",
+                                        chrono::Utc::now()
+                                            .format("%A %d/%m/%Y %I:%M:%S %p")
+                                    );
+
+                                    while !*THREAD_UPDATE_SYNC.read().unwrap() {}
+                                }
                             })
                             .unwrap(),
                     );
@@ -275,8 +408,10 @@ impl epi::App for MarketDashboard {
                 frame,
                 &username,
                 search_term,
+                refresh,
                 acct_status,
                 &mut next_state,
+                delete_prompt_state,
             ),
             State::Login => {
                 LoginPage::draw(

@@ -34,7 +34,7 @@ impl Image {
             Err(_e) => {
                 #[cfg(debug_assertions)]
                 {
-                    eprintln!("An error occured for URL \"{}\":\n{:#?}", url, _e);
+                    eprintln!("An error occured for URL \"{}\":\n{:?}", url, _e);
                     println!("Falling back to default icon...");
                 }
                 Bytes::from(base64::decode(DEFAULT_ICON).unwrap())

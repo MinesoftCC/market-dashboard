@@ -1024,6 +1024,7 @@ dependencies = [
  "base64",
  "bytes 1.0.1",
  "chrono",
+ "clipboard",
  "eframe",
  "egui",
  "egui_glium",

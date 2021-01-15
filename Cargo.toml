@@ -10,6 +10,7 @@ edition = "2018"
 base64 = "0.13"
 bytes = "1.0"
 chrono = "0.4"
+clipboard = "0.5"
 eframe = "0.7"
 egui = "0.7"
 egui_glium = { version = "0.7", features = ["persistence"] }

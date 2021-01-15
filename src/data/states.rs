@@ -18,3 +18,13 @@ pub enum State {
 impl Default for State {
     fn default() -> Self { State::Market(AccountState::LoggedOut) }
 }
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum DeletePromptState {
+    Hide,
+    Show(String),
+}
+
+impl Default for DeletePromptState {
+    fn default() -> Self { Self::Hide }
+}

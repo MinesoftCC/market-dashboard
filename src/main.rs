@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all)]
-
+#![allow(clippy::mutex_atomic)] // idk how to use AtomicBools yet
 #[macro_use]
 extern crate lazy_static;
 
@@ -9,8 +9,24 @@ pub mod data;
 pub mod views;
 
 use crate::app::MarketDashboard;
+use std::{sync::RwLock, thread, time::Duration};
+
+lazy_static! {
+    static ref THREAD_UPDATE_SYNC: RwLock<bool> = RwLock::new(false);
+}
 
 fn main() {
     let app = MarketDashboard::default();
+
+    thread::spawn(|| loop {
+        #[cfg(debug_assertions)]
+        println!("-----| UPDATE SYNC |-----");
+
+        *THREAD_UPDATE_SYNC.write().unwrap() = true;
+        *THREAD_UPDATE_SYNC.write().unwrap() = false;
+
+        thread::sleep(Duration::new(30, 0));
+    });
+
     eframe::run_native(Box::new(app));
 }

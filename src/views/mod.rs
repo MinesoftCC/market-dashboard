@@ -40,10 +40,7 @@ fn draw_sidebar(
                 }
             });
 
-            ui.label(format!(
-                "Current balance: {}",
-                USER_DATA.lock().unwrap().balance
-            ));
+            ui.label(format!("Current balance: {}", USER_DATA.get_balance()));
         },
         AccountState::LoggedOut => {
             ui.horizontal_wrapped(|ui| {

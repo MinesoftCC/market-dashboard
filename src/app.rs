@@ -19,6 +19,11 @@ lazy_static! {
 }
 
 impl USER_DATA {
+    pub fn get_clone(&self) -> User { self.lock().unwrap().clone() }
+    pub fn get_balance(&self) -> i32 { self.get_clone().balance }
+    pub fn get_user_id(&self) -> i32 { self.get_clone().id }
+    pub fn get_username(&self) -> String { self.get_clone().username }
+
     pub fn update(&self, name: &str) {
         #[derive(serde::Deserialize)]
         struct Response {
@@ -223,7 +228,7 @@ impl epi::App for MarketDashboard {
 
         egui::TopPanel::top("top_panel").show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                let mut response = ui.heading("Market");
+                let mut response = ui.heading("CCMarket");
 
                 response = response.interact(egui::Sense::click());
 

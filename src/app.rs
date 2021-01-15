@@ -1,6 +1,6 @@
 use crate::{
     data::{errors::*, image::*, states::*, user::*, MarketItems},
-    views::{IndexPage, ItemPage, LoginPage, ProfilePage},
+    views::{AddItemPage, IndexPage, ItemPage, LoginPage, ProfilePage},
 };
 use std::{sync::Mutex, thread, time::Duration};
 
@@ -130,6 +130,30 @@ impl epi::App for MarketDashboard {
         if self.market_update_thread.is_some() {
             self.market_update_thread = None;
         }
+
+        match self.state.clone() {
+            State::Item(acct_status, _)
+            | State::Profile(acct_status)
+            | State::AddItem(acct_status) => {
+                self.state = State::Market(acct_status.clone());
+
+                if acct_status == AccountState::LoggedOut {
+                    self.username = "".into();
+                    self.password = "".into();
+                }
+            },
+            State::Login => {
+                self.state = State::Market(AccountState::LoggedOut);
+
+                self.username = "".into();
+                self.password = "".into();
+            },
+            _ => (),
+        }
+
+        if !self.remember {
+            *self = Self::default();
+        }
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
@@ -170,7 +194,8 @@ impl epi::App for MarketDashboard {
         match state {
             State::Market(acct_status)
             | State::Profile(acct_status)
-            | State::ItemPage(acct_status, _) => {
+            | State::Item(acct_status, _)
+            | State::AddItem(acct_status) => {
                 if *acct_status == AccountState::LoggedIn && user_update_thread.is_none()
                 {
                     let username = username.clone();
@@ -204,12 +229,12 @@ impl epi::App for MarketDashboard {
 
                 if response.clicked {
                     match state {
-                        State::Profile(acct_status) =>
+                        State::Item(acct_status, _)
+                        | State::Profile(acct_status)
+                        | State::AddItem(acct_status) =>
                             next_state = State::Market(acct_status.clone()),
                         State::Login =>
                             next_state = State::Market(AccountState::LoggedOut),
-                        State::ItemPage(acct_status, _) =>
-                            next_state = State::Market(acct_status.clone()),
                         _ => (),
                     }
                 }
@@ -240,8 +265,10 @@ impl epi::App for MarketDashboard {
             },
             State::Profile(acct_status) =>
                 ProfilePage::draw(ctx, username, &mut next_state, acct_status),
-            State::ItemPage(acct_status, item) =>
+            State::Item(acct_status, item) =>
                 ItemPage::draw(ctx, username, &mut next_state, acct_status, item),
+            State::AddItem(acct_status) =>
+                AddItemPage::draw(ctx, username, &mut next_state, acct_status),
         }
 
         if *show_password {
@@ -261,28 +288,6 @@ impl epi::App for MarketDashboard {
     }
 
     fn save(&mut self, storage: &mut dyn epi::Storage) {
-        if !self.remember {
-            *self = Self::default();
-        }
-
-        match self.state.clone() {
-            State::ItemPage(acct_status, _) | State::Profile(acct_status) => {
-                self.state = State::Market(acct_status.clone());
-
-                if acct_status == AccountState::LoggedOut {
-                    self.username = "".into();
-                    self.password = "".into();
-                }
-            },
-            State::Login => {
-                self.state = State::Market(AccountState::LoggedOut);
-
-                self.username = "".into();
-                self.password = "".into();
-            },
-            _ => (),
-        }
-
         epi::set_value(storage, epi::APP_KEY, self);
     }
 

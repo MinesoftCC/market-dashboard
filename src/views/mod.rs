@@ -1,8 +1,10 @@
+mod add_item;
 mod index;
 mod item_page;
 mod login;
 mod profile;
 
+pub use add_item::*;
 pub use index::*;
 pub use item_page::*;
 pub use login::*;
@@ -33,7 +35,9 @@ fn draw_sidebar(
                     *next_state = State::Market(AccountState::LoggedOut);
                 }
 
-                if ui.button("Add item").clicked {}
+                if ui.button("Add item").clicked {
+                    *next_state = State::AddItem(account_status.clone());
+                }
             });
 
             ui.label(format!(

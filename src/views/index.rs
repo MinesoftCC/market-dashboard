@@ -153,10 +153,8 @@ impl IndexPage {
                                 response = response.interact(egui::Sense::click());
 
                                 if response.clicked || clicked {
-                                    *next_state = State::ItemPage(
-                                        account_status.clone(),
-                                        item.clone(),
-                                    );
+                                    *next_state =
+                                        State::Item(account_status.clone(), item.clone());
                                 }
 
                                 response.on_hover_ui(|ui| {

@@ -1,5 +1,5 @@
 use crate::{
-    app::{MARKET_CONNECTION_ERROR, MARKET_DATA},
+    app::{MARKET_CONNECTION_ERROR, MARKET_DATA, USER_DATA},
     data::{errors::*, item::*, states::*},
 };
 use chrono::prelude::*;
@@ -35,13 +35,20 @@ impl IndexPage {
             });
             ui.separator();
 
-            match market_connection_error {
-                MarketConnectionError::Show(message) => {
+            let is_empty = MARKET_DATA.lock().unwrap().is_empty();
+
+            match (market_connection_error, is_empty) {
+                (MarketConnectionError::Show(message), _) => {
                     ui.vertical_centered_justified(|ui| {
                         ui.colored_label(egui::Color32::RED, message.clone());
                     });
                 },
-                MarketConnectionError::Hide => {
+                (MarketConnectionError::Hide, true) => {
+                    ui.vertical_centered(|ui| {
+                        ui.heading("No items");
+                    });
+                },
+                (MarketConnectionError::Hide, false) => {
                     egui::ScrollArea::auto_sized().show(ui, |ui| {
                         ui.vertical_centered(|ui| {
                             let market_data = MARKET_DATA.lock().unwrap();
@@ -111,8 +118,8 @@ impl IndexPage {
                                                 .colored_label(
                                                     egui::Color32::LIGHT_GRAY,
                                                     format!(
-                                                        "Price: {} per item",
-                                                        item.price
+                                                        "Price: {} each {}",
+                                                        item.price, item.item_ratio,
                                                     ),
                                                 )
                                                 .clicked;
@@ -141,6 +148,12 @@ impl IndexPage {
                                                     ),
                                                 )
                                                 .clicked;
+
+                                            if item.poster_id
+                                                == USER_DATA.get_user_id() as u16
+                                            {
+                                                if ui.button("Delete").clicked {}
+                                            }
                                         });
                                     });
                                     ui.separator();

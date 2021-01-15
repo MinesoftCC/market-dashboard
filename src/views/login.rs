@@ -94,7 +94,7 @@ impl LoginPage {
 
         USER_DATA.lock().unwrap().username = username.into();
         USER_DATA.lock().unwrap().id = id;
-        USER_DATA.update(&username);
+        USER_DATA.update(&username, false);
     }
 
     pub fn draw(
@@ -139,7 +139,7 @@ impl LoginPage {
             if let BankConnectionError::Show(message) =
                 BANK_CONNECTION_ERROR.lock().unwrap().clone()
             {
-                ui.colored_label(egui::Color32::RED, message.clone());
+                ui.colored_label(egui::Color32::RED, message);
             }
 
             if let LoginError::Fail = show_login_error {

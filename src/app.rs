@@ -1,5 +1,5 @@
 use crate::{
-    data::{errors::*, image::*, states::*, user::*, MarketItems},
+    data::{errors::*, image::*, item::MarketItem, states::*, user::*, MarketItems},
     views::{AddItemPage, IndexPage, ItemPage, LoginPage, ProfilePage},
 };
 use std::{sync::Mutex, thread, time::Duration};
@@ -24,13 +24,17 @@ impl USER_DATA {
     pub fn get_user_id(&self) -> i32 { self.get_clone().id }
     pub fn get_username(&self) -> String { self.get_clone().username }
 
-    pub fn update(&self, name: &str) {
+    pub fn update(&self, name: &str, logout: bool) {
         #[derive(serde::Deserialize)]
         struct Response {
             balance: i32,
             name: String,
             perm_count: i32,
         };
+
+        if logout {
+            *self.lock().unwrap() = User::default();
+        }
 
         let name = if !self.lock().unwrap().username.is_empty() {
             self.lock().unwrap().username.clone()
@@ -111,14 +115,19 @@ pub struct MarketDashboard {
     market_update_thread: Option<thread::JoinHandle<()>>,
     #[serde(skip)]
     user_update_thread: Option<thread::JoinHandle<()>>,
+    // add_item specific
+    #[serde(skip)]
+    pub item: MarketItem,
+    #[serde(skip)]
+    pub item_ratio: u32,
 }
 
 impl Default for MarketDashboard {
     fn default() -> Self {
         Self {
-            username: "".into(),
-            password: "".into(),
-            search_term: "".into(),
+            username: String::default(),
+            password: String::default(),
+            search_term: String::default(),
             password_colour: egui::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
@@ -126,6 +135,8 @@ impl Default for MarketDashboard {
             show_login_error: LoginError::None,
             market_update_thread: None,
             user_update_thread: None,
+            item: MarketItem::default(),
+            item_ratio: 0,
         }
     }
 }
@@ -175,7 +186,16 @@ impl epi::App for MarketDashboard {
             show_login_error,
             market_update_thread,
             user_update_thread,
+            ..
         } = self;
+
+        match state {
+            State::AddItem(_) => (),
+            _ =>
+                if self.item != MarketItem::default() {
+                    self.item = MarketItem::default()
+                },
+        }
 
         if market_update_thread.is_none() {
             *market_update_thread = Some(
@@ -207,7 +227,7 @@ impl epi::App for MarketDashboard {
                     *user_update_thread = Some(
                         thread::Builder::new()
                             .spawn(move || loop {
-                                USER_DATA.update(&username);
+                                USER_DATA.update(&username, false);
 
                                 #[cfg(debug_assertions)]
                                 println!(
@@ -272,8 +292,14 @@ impl epi::App for MarketDashboard {
                 ProfilePage::draw(ctx, username, &mut next_state, acct_status),
             State::Item(acct_status, item) =>
                 ItemPage::draw(ctx, username, &mut next_state, acct_status, item),
-            State::AddItem(acct_status) =>
-                AddItemPage::draw(ctx, username, &mut next_state, acct_status),
+            State::AddItem(acct_status) => AddItemPage::draw(
+                ctx,
+                username,
+                &mut next_state,
+                acct_status,
+                &mut self.item,
+                &mut self.item_ratio,
+            ),
         }
 
         if *show_password {

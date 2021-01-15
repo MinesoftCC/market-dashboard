@@ -33,6 +33,7 @@ fn draw_sidebar(
 
                 if ui.button("Log out").clicked {
                     *next_state = State::Market(AccountState::LoggedOut);
+                    USER_DATA.update("", true);
                 }
 
                 if ui.button("Add item").clicked {

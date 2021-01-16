@@ -34,11 +34,13 @@ impl USER_VEC {
         self.lock().unwrap().clear();
 
         *self.lock().unwrap() = if let Ok(v) = serde_json::from_str(
-            reqwest::blocking::get(format!("{}/listusers", *BANK_API).as_str())
-                .unwrap()
-                .text()
-                .unwrap()
-                .as_str(),
+            reqwest::blocking::get(
+                format!("{}/listusers", BANK_API.to_string()).as_str(),
+            )
+            .unwrap()
+            .text()
+            .unwrap()
+            .as_str(),
         ) {
             v
         } else {
@@ -77,7 +79,7 @@ impl USER_DATA {
         let client = reqwest::blocking::Client::new();
         let response: Response = if let Ok(v) = serde_json::from_str(
             match client
-                .get(format!("{}/total/{}", *BANK_API, id).as_str())
+                .get(format!("{}/total/{}", BANK_API.to_string(), id).as_str())
                 .send()
             {
                 Ok(v) => v.text().unwrap(),
@@ -106,7 +108,10 @@ impl USER_DATA {
 impl MARKET_DATA {
     pub fn update(&self) {
         let client = reqwest::blocking::Client::new();
-        let response = match client.get(format!("{}/get", *MARKET_API).as_str()).send() {
+        let response = match client
+            .get(format!("{}/get", MARKET_API.to_string()).as_str())
+            .send()
+        {
             Ok(v) => v,
             Err(_) => {
                 *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Show(
@@ -188,6 +193,10 @@ pub struct MarketDashboard {
     pub remember: bool,
     #[serde(skip)]
     pub show_login_error: LoginError,
+    #[serde(skip)]
+    pub login_page_state: LoginPageState,
+    #[serde(skip)]
+    pub confirm_pass: String,
     // --
     // add item page specific
     #[serde(skip)]
@@ -201,10 +210,12 @@ impl Default for MarketDashboard {
             username: String::default(),
             password: String::default(),
             search_term: String::default(),
+            confirm_pass: String::default(),
             password_colour: egui::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
             refresh: false,
+            login_page_state: LoginPageState::Login,
             state: State::Market(AccountState::LoggedOut),
             delete_prompt_state: DeletePromptState::Hide,
             show_login_error: LoginError::None,
@@ -258,6 +269,7 @@ impl epi::App for MarketDashboard {
         let MarketDashboard {
             username,
             password,
+            login_page_state,
             search_term,
             show_password,
             remember,
@@ -396,8 +408,13 @@ impl epi::App for MarketDashboard {
                         | State::Profile(acct_status)
                         | State::AddItem(acct_status) =>
                             next_state = State::Market(acct_status.clone()),
-                        State::Login =>
-                            next_state = State::Market(AccountState::LoggedOut),
+                        State::Login => {
+                            *login_page_state = LoginPageState::Login;
+                            *username = "".into();
+                            *password = "".into();
+
+                            next_state = State::Market(AccountState::LoggedOut)
+                        },
                         _ => (),
                     }
                 }
@@ -422,10 +439,11 @@ impl epi::App for MarketDashboard {
             State::Login => {
                 LoginPage::draw(
                     ctx,
-                    (username, password),
+                    (username, password, &mut self.confirm_pass),
                     (&mut show_password, &mut remember),
                     password_colour,
                     &mut next_state,
+                    &mut self.login_page_state,
                     show_login_error,
                 );
             },

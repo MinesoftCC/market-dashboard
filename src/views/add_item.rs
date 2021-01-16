@@ -176,7 +176,7 @@ impl AddItemPage {
 
                         let client = reqwest::blocking::Client::new();
                         let _response = client
-                            .post(format!("{}/add_item", *MARKET_API).as_str())
+                            .post(format!("{}/add_item", MARKET_API.to_string()).as_str())
                             .header(reqwest::header::CONTENT_TYPE, "application/json")
                             .body(serde_json::to_string(&sendable_item).unwrap())
                             .send()

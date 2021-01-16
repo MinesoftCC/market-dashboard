@@ -16,7 +16,9 @@ lazy_static! {
 }
 
 fn main() {
+    #[cfg(debug_assertions)]
     dotenv::dotenv().ok();
+
     let app = MarketDashboard::default();
 
     USER_VEC.update();

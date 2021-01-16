@@ -160,7 +160,7 @@ impl IndexPage {
                                                 .post(
                                                     format!(
                                                         "{}/remove_item",
-                                                        *MARKET_API
+                                                        MARKET_API.to_string()
                                                     )
                                                     .as_str(),
                                                 )

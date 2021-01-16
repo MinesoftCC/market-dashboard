@@ -29,3 +29,13 @@ pub enum DeletePromptState {
 impl Default for DeletePromptState {
     fn default() -> Self { Self::Hide }
 }
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum LoginPageState {
+    Login,
+    CreateAccount,
+}
+
+impl Default for LoginPageState {
+    fn default() -> Self { Self::Login }
+}

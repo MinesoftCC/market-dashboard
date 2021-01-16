@@ -182,7 +182,10 @@ impl EditItemPage {
 
                         let client = reqwest::blocking::Client::new();
                         let _response = client
-                            .post(format!("{}/edit_item/{}", *MARKET_API, uid).as_str())
+                            .post(
+                                format!("{}/edit_item/{}", MARKET_API.to_string(), uid)
+                                    .as_str(),
+                            )
                             .header(reqwest::header::CONTENT_TYPE, "application/json")
                             .body(serde_json::to_string(&sendable_item).unwrap())
                             .send()

@@ -27,6 +27,7 @@ impl IndexPage {
         next_state: &mut State,
         account_status: &mut AccountState,
         delete_prompt_state: &mut DeletePromptState,
+        app_item: &mut MarketItem,
     ) {
         ui.vertical_centered(|ui| {
             let mut market_data = MARKET_DATA.lock().unwrap();
@@ -128,7 +129,11 @@ impl IndexPage {
                                         DeletePromptState::Show(item.uid.clone());
                                 }
 
-                                if same_user && ui.button("Edit").clicked {}
+                                if same_user && ui.button("Edit").clicked {
+                                    *app_item = item.clone();
+
+                                    *next_state = State::EditItem(account_status.clone());
+                                }
 
                                 if !same_user && ui.button("Purchase").clicked {}
 
@@ -209,6 +214,7 @@ impl IndexPage {
         account_status: &mut AccountState,
         next_state: &mut State,
         delete_prompt_state: &mut DeletePromptState,
+        app_item: &mut MarketItem,
     ) {
         super::draw_sidebar(ctx, username, next_state, account_status);
 
@@ -254,6 +260,7 @@ impl IndexPage {
                             next_state,
                             account_status,
                             delete_prompt_state,
+                            app_item,
                         )
                     });
                 },

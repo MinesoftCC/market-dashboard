@@ -8,7 +8,7 @@ pub mod app;
 pub mod data;
 pub mod views;
 
-use crate::app::MarketDashboard;
+use crate::app::{MarketDashboard, USER_VEC};
 use std::{sync::RwLock, thread, time::Duration};
 
 lazy_static! {
@@ -18,6 +18,8 @@ lazy_static! {
 fn main() {
     dotenv::dotenv().ok();
     let app = MarketDashboard::default();
+
+    USER_VEC.update();
 
     thread::spawn(|| loop {
         #[cfg(debug_assertions)]

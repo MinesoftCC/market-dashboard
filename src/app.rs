@@ -1,6 +1,6 @@
 use crate::{
     data::{errors::*, image::*, item::MarketItem, states::*, user::*, *},
-    views::{AddItemPage, IndexPage, ItemPage, LoginPage, ProfilePage},
+    views::*,
     THREAD_UPDATE_SYNC,
 };
 use std::{
@@ -124,13 +124,14 @@ impl MARKET_DATA {
 
                 if self_lock.contains_key(&key) {
                     let item = self_lock.get(&key).unwrap();
-                    if item.image.pixels.is_empty()
+                    if (item.image.pixels.is_empty()
                         && !value.image.pixels.is_empty()
-                        && item.image.pixels != value.image.pixels
+                        && item.image.pixels != value.image.pixels)
+                        || item.quantity != value.quantity
+                        || item.price != value.price
+                        || item.item_ratio != value.item_ratio
                     {
-                        let a = self_lock.insert(key, value);
-
-                        drop(a);
+                        let _ = self_lock.insert(key, value);
                     }
                 } else {
                     self_lock.insert(key, value);
@@ -162,6 +163,8 @@ pub struct MarketDashboard {
     pub password: String,
     pub state: State,
     pub username: String,
+    #[serde(skip)]
+    pub item: MarketItem,
     // --
     // background update threads
     #[serde(skip)]
@@ -187,8 +190,6 @@ pub struct MarketDashboard {
     pub show_login_error: LoginError,
     // --
     // add item page specific
-    #[serde(skip)]
-    pub item: MarketItem,
     #[serde(skip)]
     pub item_ratio: u32,
     // --
@@ -216,6 +217,8 @@ impl Default for MarketDashboard {
 }
 
 impl epi::App for MarketDashboard {
+    fn warm_up_enabled(&self) -> bool { true }
+
     fn on_exit(&mut self) {
         if self.market_update_thread.is_some() {
             *CLOSE_MARKET_THREAD.lock().unwrap() = true;
@@ -226,7 +229,8 @@ impl epi::App for MarketDashboard {
         match self.state.clone() {
             State::Item(acct_status, _)
             | State::Profile(acct_status)
-            | State::AddItem(acct_status) => {
+            | State::AddItem(acct_status)
+            | State::EditItem(acct_status) => {
                 self.state = State::Market(acct_status.clone());
 
                 if acct_status == AccountState::LoggedOut {
@@ -264,14 +268,15 @@ impl epi::App for MarketDashboard {
             show_login_error,
             market_update_thread,
             user_update_thread,
+            item,
             ..
         } = self;
 
         match state {
-            State::AddItem(_) => (),
+            State::AddItem(_) | State::EditItem(_) => (),
             _ =>
-                if self.item != MarketItem::default() {
-                    self.item = MarketItem::default()
+                if *item != MarketItem::default() {
+                    *item = MarketItem::default()
                 },
         }
 
@@ -412,6 +417,7 @@ impl epi::App for MarketDashboard {
                 acct_status,
                 &mut next_state,
                 delete_prompt_state,
+                &mut self.item,
             ),
             State::Login => {
                 LoginPage::draw(
@@ -432,7 +438,15 @@ impl epi::App for MarketDashboard {
                 username,
                 &mut next_state,
                 acct_status,
-                &mut self.item,
+                item,
+                &mut self.item_ratio,
+            ),
+            State::EditItem(acct_status) => EditItemPage::draw(
+                ctx,
+                username,
+                &mut next_state,
+                acct_status,
+                item,
                 &mut self.item_ratio,
             ),
         }

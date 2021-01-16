@@ -1,10 +1,12 @@
 mod add_item;
+mod edit_item;
 mod index;
 mod item_page;
 mod login;
 mod profile;
 
 pub use add_item::*;
+pub use edit_item::*;
 pub use index::*;
 pub use item_page::*;
 pub use login::*;

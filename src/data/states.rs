@@ -13,6 +13,7 @@ pub enum State {
     Profile(AccountState),
     Item(AccountState, MarketItem),
     AddItem(AccountState),
+    EditItem(AccountState),
 }
 
 impl Default for State {

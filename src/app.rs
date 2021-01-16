@@ -1,5 +1,5 @@
 use crate::{
-    data::{errors::*, image::*, item::MarketItem, states::*, user::*, MarketItems},
+    data::{errors::*, image::*, item::MarketItem, states::*, user::*, *},
     views::{AddItemPage, IndexPage, ItemPage, LoginPage, ProfilePage},
     THREAD_UPDATE_SYNC,
 };
@@ -34,7 +34,7 @@ impl USER_VEC {
         self.lock().unwrap().clear();
 
         *self.lock().unwrap() = if let Ok(v) = serde_json::from_str(
-            reqwest::blocking::get("http://157.90.30.90/bankapi/listusers")
+            reqwest::blocking::get(format!("{}/listusers", *BANK_API).as_str())
                 .unwrap()
                 .text()
                 .unwrap()
@@ -77,7 +77,7 @@ impl USER_DATA {
         let client = reqwest::blocking::Client::new();
         let response: Response = if let Ok(v) = serde_json::from_str(
             match client
-                .get(format!("http://157.90.30.90/bankapi/total/{}", id).as_str())
+                .get(format!("{}/total/{}", *BANK_API, id).as_str())
                 .send()
             {
                 Ok(v) => v.text().unwrap(),
@@ -106,7 +106,7 @@ impl USER_DATA {
 impl MARKET_DATA {
     pub fn update(&self) {
         let client = reqwest::blocking::Client::new();
-        let response = match client.get("http://localhost:8000/get").send() {
+        let response = match client.get(format!("{}/get", *MARKET_API).as_str()).send() {
             Ok(v) => v,
             Err(_) => {
                 *MARKET_CONNECTION_ERROR.lock().unwrap() = MarketConnectionError::Show(

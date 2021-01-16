@@ -1,6 +1,6 @@
 use crate::{
     app::{BANK_CONNECTION_ERROR, USER_DATA},
-    data::{errors::*, states::*},
+    data::{errors::*, states::*, *},
 };
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -16,7 +16,10 @@ impl LoginPage {
         let client = reqwest::blocking::Client::new();
         let mut user_id = 0;
 
-        let response = match client.get("http://157.90.30.90/bankapi/listusers").send() {
+        let response = match client
+            .get(format!("{}/listusers", *BANK_API).as_str())
+            .send()
+        {
             Ok(v) => v,
             Err(_) => {
                 *BANK_CONNECTION_ERROR.lock().unwrap() = BankConnectionError::Show(
@@ -54,10 +57,7 @@ impl LoginPage {
 
         let client = reqwest::blocking::Client::new();
         let response = client
-            .get(
-                format!("http://157.90.30.90/BankAPI/verifypass/{}/{}", id, password)
-                    .as_str(),
-            )
+            .get(format!("{}/verifypass/{}/{}", *BANK_API, id, password).as_str())
             .send();
 
         match response {

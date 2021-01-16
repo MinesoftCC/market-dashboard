@@ -16,6 +16,7 @@ lazy_static! {
 }
 
 fn main() {
+    dotenv::dotenv().ok();
     let app = MarketDashboard::default();
 
     thread::spawn(|| loop {

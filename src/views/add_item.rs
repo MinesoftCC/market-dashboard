@@ -3,6 +3,7 @@ use crate::{
     data::{
         item::{ItemRatio, MarketItem},
         states::*,
+        *,
     },
 };
 use chrono::prelude::*;
@@ -175,7 +176,7 @@ impl AddItemPage {
 
                         let client = reqwest::blocking::Client::new();
                         let _response = client
-                            .post("http://localhost:8000/add_item")
+                            .post(format!("{}/add_item", *MARKET_API).as_str())
                             .header(reqwest::header::CONTENT_TYPE, "application/json")
                             .body(serde_json::to_string(&sendable_item).unwrap())
                             .send()

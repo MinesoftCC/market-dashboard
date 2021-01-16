@@ -1,6 +1,6 @@
 use crate::{
     app::{MARKET_CONNECTION_ERROR, MARKET_DATA, USER_DATA, USER_VEC},
-    data::{errors::*, item::*, states::*},
+    data::{errors::*, item::*, states::*, *},
 };
 use chrono::prelude::*;
 
@@ -152,7 +152,13 @@ impl IndexPage {
                                         if ui.button("Yes").clicked {
                                             let client = reqwest::blocking::Client::new();
                                             let _response = client
-                                                .post("http://localhost:8000/remove_item")
+                                                .post(
+                                                    format!(
+                                                        "{}/remove_item",
+                                                        *MARKET_API
+                                                    )
+                                                    .as_str(),
+                                                )
                                                 .header(
                                                     reqwest::header::CONTENT_TYPE,
                                                     "application/json",

@@ -431,9 +431,7 @@ impl epi::App for MarketDashboard {
                 &username,
                 search_term,
                 refresh,
-                acct_status,
-                &mut next_state,
-                delete_prompt_state,
+                (acct_status, &mut next_state, delete_prompt_state),
                 &mut self.item,
             ),
             State::Login => {

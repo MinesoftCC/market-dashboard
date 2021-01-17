@@ -7,26 +7,16 @@ use chrono::prelude::*;
 pub struct IndexPage;
 
 impl IndexPage {
-    fn get_name_from_id(id: u16) -> String {
-        let user_vec = USER_VEC.lock().unwrap();
-
-        if id as usize > user_vec.len() {
-            format!("Invalid user")
-        } else if id == USER_DATA.get_user_id() as u16 {
-            format!("{} (You)", user_vec[id as usize])
-        } else {
-            format!("{}", user_vec[id as usize])
-        }
-    }
-
     fn main_content(
         ui: &mut egui::Ui,
         frame: &mut epi::Frame<'_>,
         search_term: &mut String,
         refresh: &mut bool,
-        next_state: &mut State,
-        account_status: &mut AccountState,
-        delete_prompt_state: &mut DeletePromptState,
+        (next_state, account_status, delete_prompt_state): (
+            &mut State,
+            &mut AccountState,
+            &mut DeletePromptState,
+        ),
         app_item: &mut MarketItem,
     ) {
         ui.vertical_centered(|ui| {
@@ -115,7 +105,7 @@ impl IndexPage {
                                     egui::Color32::LIGHT_GRAY,
                                     format!(
                                         "Posted by: {}",
-                                        Self::get_name_from_id(item.poster_id)
+                                        super::get_name_from_id(item.poster_id)
                                     ),
                                 )
                                 .clicked;
@@ -131,11 +121,17 @@ impl IndexPage {
 
                                 if same_user && ui.button("Edit").clicked {
                                     *app_item = item.clone();
-
                                     *next_state = State::EditItem(account_status.clone());
                                 }
 
-                                if !same_user && ui.button("Purchase").clicked {}
+                                if !same_user
+                                    && *account_status == AccountState::LoggedIn
+                                    && ui.button("Purchase").clicked
+                                {
+                                    *app_item = item.clone();
+                                    *next_state =
+                                        State::PurchaseItem(account_status.clone());
+                                }
 
                                 #[cfg(debug_assertions)]
                                 if ui.button("Copy UID").clicked {
@@ -211,9 +207,11 @@ impl IndexPage {
         username: &str,
         search_term: &mut String,
         refresh: &mut bool,
-        account_status: &mut AccountState,
-        next_state: &mut State,
-        delete_prompt_state: &mut DeletePromptState,
+        (account_status, next_state, delete_prompt_state): (
+            &mut AccountState,
+            &mut State,
+            &mut DeletePromptState,
+        ),
         app_item: &mut MarketItem,
     ) {
         super::draw_sidebar(ctx, username, next_state, account_status);
@@ -257,9 +255,7 @@ impl IndexPage {
                             frame,
                             search_term,
                             refresh,
-                            next_state,
-                            account_status,
-                            delete_prompt_state,
+                            (next_state, account_status, delete_prompt_state),
                             app_item,
                         )
                     });

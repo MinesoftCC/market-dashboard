@@ -4,6 +4,7 @@ mod index;
 mod item_page;
 mod login;
 mod profile;
+mod purchase_item;
 
 pub use add_item::*;
 pub use edit_item::*;
@@ -11,8 +12,12 @@ pub use index::*;
 pub use item_page::*;
 pub use login::*;
 pub use profile::*;
+pub use purchase_item::*;
 
-use crate::{app::USER_DATA, data::states::*};
+use crate::{
+    app::{USER_DATA, USER_VEC},
+    data::states::*,
+};
 
 fn draw_sidebar(
     ctx: &egui::CtxRef,
@@ -55,4 +60,16 @@ fn draw_sidebar(
             });
         },
     });
+}
+
+pub fn get_name_from_id(id: u16) -> String {
+    let user_vec = USER_VEC.lock().unwrap();
+
+    if id as usize > user_vec.len() {
+        "Invalid user".to_string()
+    } else if id == USER_DATA.get_user_id() as u16 {
+        format!("{} (You)", user_vec[id as usize])
+    } else {
+        user_vec[id as usize].to_string()
+    }
 }

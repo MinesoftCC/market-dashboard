@@ -271,16 +271,6 @@ impl LoginPage {
                     ui.checkbox(show_password, "Show password");
                 });
 
-                // ui.checkbox(remember, "Remember me");
-
-                // if ui.button("Login").clicked
-                //     && !password.is_empty()
-                //     && !username.is_empty()
-                // {
-                //     Self::get_user_data(username, password, next_state,
-                // show_login_error); }
-                //
-
                 let mut enable = true;
 
                 if username.is_empty() {
@@ -317,8 +307,7 @@ impl LoginPage {
                     .unwrap()
                     .iter()
                     .map(|uname| uname.to_lowercase())
-                    .collect::<Vec<String>>()
-                    .contains(&username.to_lowercase())
+                    .any(|x| x == username.to_lowercase())
                 {
                     enable = false;
                     ui.colored_label(

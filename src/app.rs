@@ -4,6 +4,7 @@ use crate::{
     THREAD_UPDATE_SYNC,
 };
 use std::{
+    collections::HashMap,
     sync::{
         atomic::{AtomicU8, Ordering},
         Mutex,
@@ -18,6 +19,7 @@ lazy_static! {
         id: 0,
         balance: 0,
         perms: 0,
+        accounts: HashMap::new(),
     });
     pub static ref MARKET_CONNECTION_ERROR: Mutex<MarketConnectionError> =
         Mutex::new(MarketConnectionError::Hide);
@@ -57,7 +59,7 @@ impl USER_DATA {
 
     pub fn update(&self, name: &str, logout: bool) {
         #[derive(serde::Deserialize)]
-        struct Response {
+        struct UserResponse {
             balance: i32,
             name: String,
             perm_count: i32,
@@ -77,7 +79,7 @@ impl USER_DATA {
 
         let id = LoginPage::get_user_id(&name);
         let client = reqwest::blocking::Client::new();
-        let response: Response = if let Ok(v) = serde_json::from_str(
+        let user_response: UserResponse = if let Ok(v) = serde_json::from_str(
             match client
                 .get(format!("{}/total/{}", BANK_API.to_string(), id).as_str())
                 .send()
@@ -96,10 +98,30 @@ impl USER_DATA {
             return;
         };
 
+        let account_response: UserAccounts = if let Ok(v) = serde_json::from_str(
+            match client
+                .get(format!("{}/listaccounts/{}", BANK_API.to_string(), id).as_str())
+                .send()
+            {
+                Ok(v) => v.text().unwrap(),
+                Err(_) => {
+                    *CLOSE_USER_THREAD.lock().unwrap() = true;
+                    return;
+                },
+            }
+            .as_str(),
+        ) {
+            v
+        } else {
+            *CLOSE_USER_THREAD.lock().unwrap() = true;
+            return;
+        };
+
         *USER_DATA.lock().unwrap() = User {
-            username: response.name.clone(),
-            balance: response.balance,
-            perms: response.perm_count,
+            username: user_response.name.clone(),
+            balance: user_response.balance,
+            perms: user_response.perm_count,
+            accounts: account_response,
             id,
         };
     }
@@ -202,6 +224,13 @@ pub struct MarketDashboard {
     #[serde(skip)]
     pub item_ratio: u32,
     // --
+    // purchase page specific
+    #[serde(skip)]
+    pub selected_account: String,
+    #[serde(skip)]
+    pub purchase_amount: u32,
+    #[serde(skip)]
+    pub show_purchase_error: PurchaseError,
 }
 
 impl Default for MarketDashboard {
@@ -211,6 +240,7 @@ impl Default for MarketDashboard {
             password: String::default(),
             search_term: String::default(),
             confirm_pass: String::default(),
+            selected_account: String::default(),
             password_colour: egui::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
@@ -219,10 +249,12 @@ impl Default for MarketDashboard {
             state: State::Market(AccountState::LoggedOut),
             delete_prompt_state: DeletePromptState::Hide,
             show_login_error: LoginError::None,
+            show_purchase_error: PurchaseError::Hide,
             market_update_thread: None,
             user_update_thread: None,
             item: MarketItem::default(),
             item_ratio: 0,
+            purchase_amount: 0,
         }
     }
 }
@@ -241,7 +273,8 @@ impl epi::App for MarketDashboard {
             State::Item(acct_status, _)
             | State::Profile(acct_status)
             | State::AddItem(acct_status)
-            | State::EditItem(acct_status) => {
+            | State::EditItem(acct_status)
+            | State::PurchaseItem(acct_status) => {
                 self.state = State::Market(acct_status.clone());
 
                 if acct_status == AccountState::LoggedOut {
@@ -278,6 +311,7 @@ impl epi::App for MarketDashboard {
             state,
             delete_prompt_state,
             show_login_error,
+            show_purchase_error,
             market_update_thread,
             user_update_thread,
             item,
@@ -285,7 +319,7 @@ impl epi::App for MarketDashboard {
         } = self;
 
         match state {
-            State::AddItem(_) | State::EditItem(_) => (),
+            State::AddItem(_) | State::EditItem(_) | State::PurchaseItem(_) => (),
             _ =>
                 if *item != MarketItem::default() {
                     *item = MarketItem::default()
@@ -406,7 +440,8 @@ impl epi::App for MarketDashboard {
                     match state {
                         State::Item(acct_status, _)
                         | State::Profile(acct_status)
-                        | State::AddItem(acct_status) =>
+                        | State::AddItem(acct_status)
+                        | State::PurchaseItem(acct_status) =>
                             next_state = State::Market(acct_status.clone()),
                         State::Login => {
                             *login_page_state = LoginPageState::Login;
@@ -430,6 +465,7 @@ impl epi::App for MarketDashboard {
                 frame,
                 &username,
                 search_term,
+                (password, &mut self.confirm_pass, &mut self.selected_account),
                 refresh,
                 (acct_status, &mut next_state, delete_prompt_state),
                 &mut self.item,
@@ -464,6 +500,16 @@ impl epi::App for MarketDashboard {
                 acct_status,
                 item,
                 &mut self.item_ratio,
+            ),
+            State::PurchaseItem(acct_status) => PurchasePage::draw(
+                ctx,
+                (username, password, &mut self.confirm_pass),
+                &mut self.selected_account,
+                password_colour,
+                show_password,
+                (&mut next_state, acct_status),
+                (item, &mut self.purchase_amount),
+                show_purchase_error,
             ),
         }
 

@@ -14,6 +14,7 @@ pub enum State {
     Item(AccountState, MarketItem),
     AddItem(AccountState),
     EditItem(AccountState),
+    PurchaseItem(AccountState),
 }
 
 impl Default for State {

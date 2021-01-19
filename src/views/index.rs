@@ -1,5 +1,5 @@
 use crate::{
-    app::{MARKET_CONNECTION_ERROR, MARKET_DATA, USER_DATA, USER_VEC},
+    app::{MARKET_CONNECTION_ERROR, MARKET_DATA, USER_DATA},
     data::{errors::*, item::*, states::*, *},
 };
 use chrono::prelude::*;
@@ -11,6 +11,11 @@ impl IndexPage {
         ui: &mut egui::Ui,
         frame: &mut epi::Frame<'_>,
         search_term: &mut String,
+        (password, confirm_pass, current_account): (
+            &mut String,
+            &mut String,
+            &mut String,
+        ),
         refresh: &mut bool,
         (next_state, account_status, delete_prompt_state): (
             &mut State,
@@ -129,6 +134,9 @@ impl IndexPage {
                                     && ui.button("Purchase").clicked
                                 {
                                     *app_item = item.clone();
+                                    *password = "".into();
+                                    *confirm_pass = "".into();
+                                    *current_account = "".into();
                                     *next_state =
                                         State::PurchaseItem(account_status.clone());
                                 }
@@ -206,6 +214,11 @@ impl IndexPage {
         frame: &mut epi::Frame<'_>,
         username: &str,
         search_term: &mut String,
+        (password, confirm_pass, current_account): (
+            &mut String,
+            &mut String,
+            &mut String,
+        ),
         refresh: &mut bool,
         (account_status, next_state, delete_prompt_state): (
             &mut AccountState,
@@ -254,6 +267,7 @@ impl IndexPage {
                             ui,
                             frame,
                             search_term,
+                            (password, confirm_pass, current_account),
                             refresh,
                             (next_state, account_status, delete_prompt_state),
                             app_item,

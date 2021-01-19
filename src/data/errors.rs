@@ -28,3 +28,13 @@ pub enum MarketConnectionError {
 impl Default for MarketConnectionError {
     fn default() -> Self { MarketConnectionError::Hide }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PurchaseError {
+    Hide,
+    Show(String),
+}
+
+impl Default for PurchaseError {
+    fn default() -> Self { PurchaseError::Hide }
+}

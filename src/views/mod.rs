@@ -65,7 +65,7 @@ fn draw_sidebar(
 pub fn get_name_from_id(id: u16) -> String {
     let user_vec = USER_VEC.lock().unwrap();
 
-    if id as usize > user_vec.len() {
+    if id as usize >= user_vec.len() {
         "Invalid user".to_string()
     } else if id == USER_DATA.get_user_id() as u16 {
         format!("{} (You)", user_vec[id as usize])

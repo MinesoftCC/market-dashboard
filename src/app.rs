@@ -4,6 +4,8 @@ use crate::{
     THREAD_UPDATE_SYNC,
 };
 use std::{
+    fs::{create_dir, File},
+    path::Path,
     sync::atomic::Ordering,
     thread,
 };
@@ -16,6 +18,10 @@ pub struct MarketDashboard {
     pub username: String,
     #[serde(skip)]
     pub item: MarketItem,
+    // --
+    // config page specific
+    pub market_ip: String,
+    pub market_port: String,
     // --
     // background update threads
     #[serde(skip)]
@@ -65,6 +71,8 @@ impl Default for MarketDashboard {
             search_term: String::default(),
             confirm_pass: String::default(),
             selected_account: String::default(),
+            market_ip: String::default(),
+            market_port: String::default(),
             password_colour: egui::Color32::TRANSPARENT,
             show_password: false,
             remember: false,
@@ -343,6 +351,12 @@ impl epi::App for MarketDashboard {
                 (item, &mut self.purchase_amount),
                 show_purchase_error,
             ),
+            State::Config => ConfigPage::draw(
+                ctx,
+                &mut self.market_ip,
+                &mut self.market_port,
+                &mut next_state,
+            ),
         }
 
         if *show_password {
@@ -358,7 +372,32 @@ impl epi::App for MarketDashboard {
     }
 
     fn load(&mut self, storage: &dyn epi::Storage) {
+        let data_dir_path = Path::new("md-data");
+        let instances_file_path = Path::new("md-data/instances.json");
+
         *self = epi::get_value(storage, epi::APP_KEY).unwrap_or_default();
+
+        if !data_dir_path.exists() {
+            if let Err(e) = create_dir(&data_dir_path) {
+                eprintln!("Could not create data directory: {}", e);
+                return;
+            }
+
+            self.state = State::Config;
+        }
+
+        if !instances_file_path.exists() {
+            if let Err(e) = File::create(instances_file_path) {
+                eprintln!(
+                    "Could not create instances data file '{}': {}",
+                    instances_file_path.display(),
+                    e
+                );
+                return;
+            }
+
+            self.state = State::Config;
+        }
     }
 
     fn save(&mut self, storage: &mut dyn epi::Storage) {

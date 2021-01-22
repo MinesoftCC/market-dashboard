@@ -5,11 +5,47 @@ pub mod states;
 pub mod statics;
 pub mod user;
 
+use errors::BankConnectionError;
 use std::{collections::HashMap, env};
 
 pub use statics::*;
 
 pub type MarketItems = HashMap<String, item::MarketItem>;
+
+pub fn get_user_id(username: &str) -> i32 {
+    let client = reqwest::blocking::Client::new();
+    let mut user_id = 0;
+
+    let response = match client
+        .get(format!("{}/listusers", BANK_API.to_string()).as_str())
+        .send()
+    {
+        Ok(v) => v,
+        Err(_) => {
+            *BANK_CONNECTION_ERROR.lock().unwrap() = BankConnectionError::Show(
+                "Could not connect to bank server to get user ID".into(),
+            );
+            return user_id;
+        },
+    };
+
+    let users: Vec<String> =
+        if let Ok(v) = serde_json::from_str(response.text().unwrap().as_str()) {
+            v
+        } else {
+            Vec::new()
+        };
+
+    users.iter().enumerate().into_iter().for_each(|(id, user)| {
+        if user == username {
+            user_id = (id) as i32;
+        }
+    });
+
+    USER_DATA.lock().unwrap().id = user_id;
+
+    user_id
+}
 
 #[cfg(not(debug_assertions))]
 pub static BANK_API: &str = env!("BANK_API_ADDR", "Please define BANK_API_ADDR");

@@ -15,6 +15,7 @@ pub enum State {
     AddItem(AccountState),
     EditItem(AccountState),
     PurchaseItem(AccountState),
+    Config,
 }
 
 impl Default for State {

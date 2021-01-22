@@ -1,7 +1,4 @@
-use crate::{
-    app::{BANK_CONNECTION_ERROR, USER_DATA, USER_VEC},
-    data::{errors::*, states::*, *},
-};
+use crate::data::{errors::*, states::*, *};
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct BankResponse {

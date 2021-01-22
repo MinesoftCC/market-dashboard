@@ -1,7 +1,4 @@
-use crate::{
-    app::{MARKET_CONNECTION_ERROR, MARKET_DATA, USER_DATA},
-    data::{errors::*, item::*, states::*, *},
-};
+use crate::data::{errors::*, item::*, states::*, *};
 use chrono::prelude::*;
 
 pub struct IndexPage;

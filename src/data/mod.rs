@@ -2,9 +2,12 @@ pub mod errors;
 pub mod image;
 pub mod item;
 pub mod states;
+pub mod statics;
 pub mod user;
 
 use std::{collections::HashMap, env};
+
+pub use statics::*;
 
 pub type MarketItems = HashMap<String, item::MarketItem>;
 

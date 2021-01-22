@@ -8,7 +8,7 @@ pub mod app;
 pub mod data;
 pub mod views;
 
-use crate::app::{MarketDashboard, USER_VEC};
+use crate::{app::MarketDashboard, data::statics::*};
 use std::{sync::RwLock, thread, time::Duration};
 
 lazy_static! {

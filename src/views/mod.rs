@@ -14,10 +14,7 @@ pub use login::*;
 pub use profile::*;
 pub use purchase_item::*;
 
-use crate::{
-    app::{USER_DATA, USER_VEC},
-    data::states::*,
-};
+use crate::data::{states::*, *};
 
 fn draw_sidebar(
     ctx: &egui::CtxRef,

@@ -1,10 +1,7 @@
-use crate::{
-    app::{MARKET_DATA, USER_DATA},
-    data::{
-        item::{ItemRatio, MarketItem},
-        states::*,
-        *,
-    },
+use crate::data::{
+    item::{ItemRatio, MarketItem},
+    states::*,
+    *,
 };
 
 use chrono::prelude::*;

@@ -1,13 +1,10 @@
 pub struct PurchasePage;
 
-use crate::{
-    app::{MARKET_DATA, USER_DATA},
-    data::{
-        errors::PurchaseError,
-        item::{ItemRatio, MarketItem},
-        states::*,
-        *,
-    },
+use crate::data::{
+    errors::PurchaseError,
+    item::{ItemRatio, MarketItem},
+    states::*,
+    *,
 };
 
 impl PurchasePage {

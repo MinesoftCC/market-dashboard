@@ -28,7 +28,7 @@ impl Display for ItemRatio {
     }
 }
 
-#[derive(Default, PartialEq, serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(Default, serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct MarketItem {
     #[serde(skip)]
     pub uid: String,
@@ -70,6 +70,19 @@ impl MarketItem {
             time_posted,
             item_ratio: ratio,
         }
+    }
+}
+
+impl PartialEq for MarketItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.display_name == other.display_name
+            && self.item_id == other.item_id
+            && self.item_image_url == other.item_image_url
+            && self.item_ratio == other.item_ratio
+            && self.poster_id == other.poster_id
+            && self.price == other.price
+            && self.quantity == other.quantity
+            && self.time_posted == other.time_posted
     }
 }
 

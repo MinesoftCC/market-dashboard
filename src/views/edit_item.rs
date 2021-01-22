@@ -45,14 +45,12 @@ impl EditItemPage {
 
                     ui.horizontal(|ui| {
                         ui.label("Display name");
-                        ui.add(egui::TextEdit::singleline(display_name).enabled(false));
-                        ui.label("[locked]");
+                        ui.text_edit_singleline(display_name);
                     });
 
                     ui.horizontal(|ui| {
                         ui.label("Item ID");
-                        ui.add(egui::TextEdit::singleline(item_id).enabled(false));
-                        ui.label("[locked]");
+                        ui.text_edit_singleline(item_id);
                     });
 
                     ui.horizontal(|ui| {

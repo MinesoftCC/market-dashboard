@@ -10,8 +10,12 @@ use crate::data::{
 impl PurchasePage {
     pub fn draw(
         ctx: &egui::CtxRef,
-        (username, password, confirm_pass): (&str, &mut String, &mut String),
-        selected_account: &mut String,
+        (username, password, confirm_pass, selected_account): (
+            &str,
+            &mut String,
+            &mut String,
+            &mut String,
+        ),
         password_colour: &mut egui::Color32,
         show_password: &mut bool,
         (next_state, account_status): (&mut State, &mut AccountState),

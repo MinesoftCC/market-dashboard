@@ -209,9 +209,9 @@ impl IndexPage {
     pub fn draw(
         ctx: &egui::CtxRef,
         frame: &mut epi::Frame<'_>,
-        username: &str,
-        search_term: &mut String,
-        (password, confirm_pass, current_account): (
+        (username, search_term, password, confirm_pass, current_account): (
+            &str,
+            &mut String,
             &mut String,
             &mut String,
             &mut String,

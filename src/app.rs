@@ -287,9 +287,13 @@ impl epi::App for MarketDashboard {
             State::Market(acct_status) => IndexPage::draw(
                 ctx,
                 frame,
-                &username,
-                search_term,
-                (password, &mut self.confirm_pass, &mut self.selected_account),
+                (
+                    &username,
+                    search_term,
+                    password,
+                    &mut self.confirm_pass,
+                    &mut self.selected_account,
+                ),
                 refresh,
                 (acct_status, &mut next_state, delete_prompt_state),
                 &mut self.item,
@@ -327,8 +331,12 @@ impl epi::App for MarketDashboard {
             ),
             State::PurchaseItem(acct_status) => PurchasePage::draw(
                 ctx,
-                (username, password, &mut self.confirm_pass),
-                &mut self.selected_account,
+                (
+                    username,
+                    password,
+                    &mut self.confirm_pass,
+                    &mut self.selected_account,
+                ),
                 password_colour,
                 show_password,
                 (&mut next_state, acct_status),

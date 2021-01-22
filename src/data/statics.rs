@@ -1,4 +1,4 @@
-use super::{super::views::LoginPage, errors::*, image::*, user::*, MarketItems, *};
+use super::{errors::*, image::*, user::*, MarketItems, *};
 use std::sync::{atomic::AtomicU8, Mutex};
 
 lazy_static! {
@@ -62,7 +62,7 @@ impl USER_DATA {
             name.to_string()
         };
 
-        let id = LoginPage::get_user_id(&name);
+        let id = super::get_user_id(&name);
         let client = reqwest::blocking::Client::new();
         let user_response: UserResponse = if let Ok(v) = serde_json::from_str(
             match client

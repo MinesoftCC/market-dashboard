@@ -1,4 +1,5 @@
 mod add_item;
+mod create_config;
 mod edit_item;
 mod index;
 mod item_page;
@@ -7,6 +8,7 @@ mod profile;
 mod purchase_item;
 
 pub use add_item::*;
+pub use create_config::*;
 pub use edit_item::*;
 pub use index::*;
 pub use item_page::*;

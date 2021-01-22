@@ -9,48 +9,13 @@ pub struct BankResponse {
 pub struct LoginPage;
 
 impl LoginPage {
-    pub fn get_user_id(username: &str) -> i32 {
-        let client = reqwest::blocking::Client::new();
-        let mut user_id = 0;
-
-        let response = match client
-            .get(format!("{}/listusers", BANK_API.to_string()).as_str())
-            .send()
-        {
-            Ok(v) => v,
-            Err(_) => {
-                *BANK_CONNECTION_ERROR.lock().unwrap() = BankConnectionError::Show(
-                    "Could not connect to bank server to get user ID".into(),
-                );
-                return user_id;
-            },
-        };
-
-        let users: Vec<String> =
-            if let Ok(v) = serde_json::from_str(response.text().unwrap().as_str()) {
-                v
-            } else {
-                Vec::new()
-            };
-
-        users.iter().enumerate().into_iter().for_each(|(id, user)| {
-            if user == username {
-                user_id = (id) as i32;
-            }
-        });
-
-        USER_DATA.lock().unwrap().id = user_id;
-
-        user_id
-    }
-
     fn get_user_data(
         username: &str,
         password: &str,
         next_state: &mut State,
         show_login_error: &mut LoginError,
     ) {
-        let id = Self::get_user_id(username);
+        let id = get_user_id(username);
 
         let client = reqwest::blocking::Client::new();
         let response = client

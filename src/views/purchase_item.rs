@@ -64,12 +64,13 @@ impl PurchasePage {
 
                 let multiplier = match item_ratio {
                     ItemRatio::Pair => 2,
-                    ItemRatio::HalfStack =>
+                    ItemRatio::HalfStack => {
                         if sixteen_stack_ids.contains(&item_id.as_str()) {
                             8
                         } else {
                             32
-                        },
+                        }
+                    },
                     ItemRatio::Stack =>
                         if sixteen_stack_ids.contains(&item_id.as_str()) {
                             16
@@ -128,26 +129,39 @@ impl PurchasePage {
                         *purchase_amt = purchase_amt.wrapping_sub(1);
                     }
 
-                    ui.add(egui::Slider::u32(purchase_amt, 0..=max_purchasable));
+                    let purchase_amt_clone = *purchase_amt;
 
-                    if *item_ratio != ItemRatio::Individual {
-                        ui.label(format!(
-                            "Purchasing {} {}(s) out of a possible {}. ({} {}(s) = {} \
-                             {}(s))",
-                            purchase_amt,
-                            item_ratio,
-                            max_purchasable,
-                            purchase_amt,
-                            item_ratio,
-                            *purchase_amt * multiplier,
-                            display_name.to_lowercase(),
-                        ));
-                    } else {
-                        ui.label(format!(
-                            "Purchasing {} {}(s) out of a possible {}",
-                            purchase_amt, item_ratio, max_purchasable
-                        ));
-                    }
+                    ui.add(
+                        egui::Slider::u32(purchase_amt, 0..=max_purchasable)
+                            .text_color(
+                                if cost > current_account.balance as u32 {
+                                    egui::Color32::RED
+                                } else if cost == 0 {
+                                    egui::Color32::from_rgb(255, 165, 0)
+                                } else {
+                                    egui::Color32::GREEN
+                                },
+                            )
+                            .text(
+                                if *item_ratio != ItemRatio::Individual {
+                                    format!(
+                                        "{}(s) out of a possible {}. ({} {}(s) = {} \
+                                         {}(s))",
+                                        item_ratio,
+                                        max_purchasable,
+                                        purchase_amt_clone,
+                                        item_ratio,
+                                        purchase_amt_clone * multiplier,
+                                        display_name.to_lowercase(),
+                                    )
+                                } else {
+                                    format!(
+                                        "{}(s) out of a possible {}",
+                                        item_ratio, max_purchasable
+                                    )
+                                },
+                            ),
+                    );
                 });
 
                 ui.colored_label(

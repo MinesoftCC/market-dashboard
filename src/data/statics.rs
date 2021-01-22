@@ -62,7 +62,7 @@ impl USER_DATA {
             name.to_string()
         };
 
-        let id = super::get_user_id(&name);
+        let id = get_user_id(&name);
         let client = reqwest::blocking::Client::new();
         let user_response: UserResponse = if let Ok(v) = serde_json::from_str(
             match client

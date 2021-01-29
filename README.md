@@ -9,7 +9,7 @@ source code changes.
 
 ### Requirements:
 - Linux
-    - Debian/Ubuntu-based distros: `sudo apt-get install libxcb-render0-dev
+    - Debian/Ubuntu-based distros: `sudo apt install libxcb-render0-dev
         libxcb-shape0-dev libxcb-xfixes0-dev`
 
 ### Features

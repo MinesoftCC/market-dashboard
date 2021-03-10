@@ -78,7 +78,7 @@ impl Default for MarketDashboard {
             remember: false,
             refresh: false,
             login_page_state: LoginPageState::Login,
-            state: State::Market(AccountState::LoggedOut),
+            state: State::Config,
             delete_prompt_state: DeletePromptState::Hide,
             show_login_error: LoginError::None,
             show_purchase_error: PurchaseError::Hide,
